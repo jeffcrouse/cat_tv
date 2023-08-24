@@ -1,7 +1,6 @@
 require('dotenv').config()
 const { spawn, exec } = require('node:child_process');
 const axios = require('axios');
-//const cron = require('node-cron');
 const nodeSchedule = require('node-schedule');
 const dayjs = require('dayjs');
 
@@ -76,17 +75,17 @@ async function stop() {
 }
 
 
-nodeSchedule.scheduleJob('1-59/2 * * * *', start)
-nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
+// nodeSchedule.scheduleJob('1-59/2 * * * *', start)
+// nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
 
-// // Start up the video at 7am
-// cron.schedule('0 7 * * *', start);
+// Start up the video at 7am
+nodeSchedule.scheduleJob('0 7 * * *', start);
 
-// // Stop the video at 11am
-// cron.schedule('0 11 * * *', stop);
+// Stop the video at 11am
+nodeSchedule.scheduleJob('0 11 * * *', stop);
 
-// // Start up the video at 5pm
-// cron.schedule('0 17 * * *', start);
+// Start up the video at 5pm
+nodeSchedule.scheduleJob('0 17 * * *', start);
 
-// // Stop the video at 8pm
-// cron.schedule('0 20 * * *', stop);
+// Stop the video at 8pm
+nodeSchedule.scheduleJob('0 20 * * *', stop);
