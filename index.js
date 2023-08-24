@@ -1,7 +1,8 @@
 require('dotenv').config()
 const { spawn, exec } = require('node:child_process');
 const axios = require('axios');
-const cron = require('node-cron');
+//const cron = require('node-cron');
+const nodeSchedule = require('node-schedule');
 const dayjs = require('dayjs');
 
 
@@ -29,6 +30,7 @@ async function get_video() {
 		} else {
 			console.log('Error', error.message);
 		}
+		return null;
 	}
 }
 
@@ -36,22 +38,27 @@ async function get_video() {
  * 
  */
 async function start() {
-	const video = await get_video();
 	const t = dayjs().format("HH-mm-ss"); 
-	console.log(`[${t}] starting ${video.title}`);
-	const url = `https://www.youtube.com/embed/${video.id}?autoplay=1`;
-	proc = spawn('chromium-browser', ['--kiosk', '--autoplay-policy=no-user-gesture-required', url]);
-	proc.stdout.on('data', (data) => {
-		console.log(`stdout: ${data}`);
-	});
-
-	proc.stderr.on('data', (data) => {
-		console.error(`stderr: ${data}`);
-	});
-
-	proc.on('close', (code) => {
-		console.log(`child process exited with code ${code}`);
-	}); 
+	const video = await get_video();
+	
+	if(video) {
+		console.log(`[${t}] starting ${video.title}`);
+		const url = `https://www.youtube.com/embed/${video.id}?autoplay=1`;
+		proc = spawn('chromium-browser', ['--kiosk', '--autoplay-policy=no-user-gesture-required', url]);
+		proc.stdout.on('data', (data) => {
+			console.log(`stdout: ${data}`);
+		});
+	
+		proc.stderr.on('data', (data) => {
+			console.error(`stderr: ${data}`);
+		});
+	
+		proc.on('close', (code) => {
+			console.log(`child process exited with code ${code}`);
+		}); 
+	} else {
+		console.log(`[${t}] failed to fetch video.`);
+	}
 }
 
 /**
@@ -68,31 +75,18 @@ async function stop() {
 	//exec('pkill -o chromium');
 }
 
-cron.schedule('1-59/2 * * * *', start);
-cron.schedule('0-58/2 * * * *', stop);
 
-
+nodeSchedule.scheduleJob('1-59/2 * * * *', start)
+nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
 
 // // Start up the video at 7am
-// cron.schedule('0 7 * * *', async () =>  {
-// 	const video = await get_video();
-// 	console.log(video);
-// });
+// cron.schedule('0 7 * * *', start);
 
 // // Stop the video at 11am
-// cron.schedule('0 11 * * *', async () =>  {
-// 	const video = await get_video();
-// 	console.log(video);
-// });
+// cron.schedule('0 11 * * *', stop);
 
 // // Start up the video at 5pm
-// cron.schedule('0 17 * * *', async () =>  {
-// 	const video = await get_video();
-// 	console.log(video);
-// });
+// cron.schedule('0 17 * * *', start);
 
 // // Stop the video at 8pm
-// cron.schedule('0 20 * * *', async () =>  {
-// 	const video = await get_video();
-// 	console.log(video);
-// });
+// cron.schedule('0 20 * * *', stop);
