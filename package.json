@@ -1,0 +1,29 @@
+{
+  "name": "cat_tv",
+  "version": "1.0.0",
+  "description": "play bird videos during certain times of day. created for RPi",
+  "main": "index.js",
+  "dependencies": {
+    "asynckit": "^0.4.0",
+    "axios": "^1.4.0",
+    "combined-stream": "^1.0.8",
+    "delayed-stream": "^1.0.0",
+    "dotenv": "^16.3.1",
+    "follow-redirects": "^1.15.2",
+    "form-data": "^4.0.0",
+    "mime-db": "^1.52.0",
+    "mime-types": "^2.1.35",
+    "node-cron": "^3.0.2",
+    "proxy-from-env": "^1.1.0",
+    "sax": "^0.5.8",
+    "uuid": "^8.3.2",
+    "xml2js": "^0.2.8",
+    "youtube-search": "^1.1.6"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
