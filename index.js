@@ -1,7 +1,9 @@
 require('dotenv').config()
-const { spawn, exec  } = require('node:child_process');
+const { spawn, exec } = require('node:child_process');
 const axios = require('axios');
 const cron = require('node-cron');
+const dayjs = require('dayjs');
+
 
 var proc = null;
 //const q = "🔴 24/7 LIVE: Cat TV for Cats to Watch 😺 Cute Birds Chipmunks Squirrels in the Forest 4K";
@@ -35,7 +37,8 @@ async function get_video() {
  */
 async function start() {
 	const video = await get_video();
-	console.log(`starting ${video.title}`);
+	const t = dayjs().format("HH-mm-ss"); 
+	console.log(`[${t}] starting ${video.title}`);
 	const url = `https://www.youtube.com/embed/${video.id}?autoplay=1`;
 	proc = spawn('chromium-browser', ['--kiosk', '--autoplay-policy=no-user-gesture-required', url]);
 	proc.stdout.on('data', (data) => {
@@ -55,7 +58,8 @@ async function start() {
  * 
  */
 async function stop() {
-	console.log('killing process');
+	const t = dayjs().format("HH-mm-ss"); 
+	console.log(`[${t}] killing process`);
 	if(proc) {
 		proc.stdin.pause();
 		proc.kill();
