@@ -64,8 +64,8 @@ async function stop() {
 	//exec('pkill -o chromium');
 }
 
-cron.schedule('*/2 * * * *', start);
-cron.schedule('1-59/2 * * * *', stop);
+cron.schedule('1-59/2 * * * *', start);
+cron.schedule('0-58/2 * * * *', stop);
 
 
 
