@@ -4,11 +4,15 @@ const axios = require('axios');
 const cron = require('node-cron');
 
 var proc = null;
+//const q = "🔴 24/7 LIVE: Cat TV for Cats to Watch 😺 Cute Birds Chipmunks Squirrels in the Forest 4K";
+const q = "🔴 24/7 LIVE: Cat TV ";
 
+/**
+ * 
+ * @returns 
+ */
 async function get_video() {
 	try {
-		//const q = "🔴 24/7 LIVE: Cat TV for Cats to Watch 😺 Cute Birds Chipmunks Squirrels in the Forest 4K";
-		const q = "🔴 24/7 LIVE: Cat TV ";
 		const url = `https://youtube.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&part=snippet&q=${encodeURIComponent(q)}`;
 		const resp = await axios.get(url);
 		const options = resp.data.items.map( (item) => { return { title: item.snippet.title, id: item.id.videoId }});
@@ -26,9 +30,12 @@ async function get_video() {
 	}
 }
 
+/**
+ * 
+ */
 async function start() {
 	const video = await get_video();
-	console.log(`starting ${video.id}`);
+	console.log(`starting ${video.title}`);
 	const url = `https://www.youtube.com/embed/${video.id}?autoplay=1`;
 	proc = spawn('chromium-browser', ['--kiosk', '--autoplay-policy=no-user-gesture-required', url]);
 	proc.stdout.on('data', (data) => {
@@ -44,7 +51,9 @@ async function start() {
 	}); 
 }
 
-
+/**
+ * 
+ */
 async function stop() {
 	console.log('killing process');
 	if(proc) {
@@ -52,7 +61,7 @@ async function stop() {
 		proc.kill();
 		proc = null;
 	}
-	exec('pkill -o chromium');
+	//exec('pkill -o chromium');
 }
 
 cron.schedule('*/2 * * * *', start);
