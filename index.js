@@ -39,7 +39,7 @@ async function get_video() {
 async function start() {
 	const t = dayjs().format("HH-mm-ss"); 
 	const video = await get_video();
-	exec(`xset -display :0 dpms force on`);
+	exec(`xset dpms force on`);
 
 	if(video) {
 		console.log(`[${t}] starting ${video.title}`);
@@ -72,7 +72,7 @@ async function stop() {
 		proc.kill();
 		proc = null;
 	}
-	exec(`xset -display :0 dpms force off`);
+	exec(`sleep 1; xset dpms force off`);
 	//exec('pkill -o chromium');
 }
 
