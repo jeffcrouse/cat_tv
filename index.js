@@ -39,7 +39,8 @@ async function get_video() {
 async function start() {
 	const t = dayjs().format("HH-mm-ss"); 
 	const video = await get_video();
-	
+	exec(`xset -display :0 dpms force on`);
+
 	if(video) {
 		console.log(`[${t}] starting ${video.title}`);
 		const url = `https://www.youtube.com/embed/${video.id}?autoplay=1`;
@@ -71,21 +72,23 @@ async function stop() {
 		proc.kill();
 		proc = null;
 	}
+	exec(`xset -display :0 s blank`);
+	exec(`xset -display :0 dpms force off`);
 	//exec('pkill -o chromium');
 }
 
 
-// nodeSchedule.scheduleJob('1-59/2 * * * *', start)
-// nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
+nodeSchedule.scheduleJob('1-59/2 * * * *', start)
+nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
 
-// Start up the video at 7am
-nodeSchedule.scheduleJob('0 7 * * *', start);
+// // Start up the video at 7am
+// nodeSchedule.scheduleJob('0 7 * * *', start);
 
-// Stop the video at 11am
-nodeSchedule.scheduleJob('0 11 * * *', stop);
+// // Stop the video at 11am
+// nodeSchedule.scheduleJob('0 11 * * *', stop);
 
-// Start up the video at 5pm
-nodeSchedule.scheduleJob('0 17 * * *', start);
+// // Start up the video at 5pm
+// nodeSchedule.scheduleJob('0 17 * * *', start);
 
-// Stop the video at 8pm
-nodeSchedule.scheduleJob('0 20 * * *', stop);
+// // Stop the video at 8pm
+// nodeSchedule.scheduleJob('0 20 * * *', stop);
