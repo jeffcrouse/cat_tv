@@ -72,7 +72,6 @@ async function stop() {
 		proc.kill();
 		proc = null;
 	}
-	exec(`xset -display :0 s blank`);
 	exec(`xset -display :0 dpms force off`);
 	//exec('pkill -o chromium');
 }
