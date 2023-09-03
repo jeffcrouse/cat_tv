@@ -16,6 +16,7 @@ const q = "🔴 24/7 LIVE: Cat TV ";
 async function get_video() {
 	try {
 		const url = `https://youtube.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&part=snippet&q=${encodeURIComponent(q)}`;
+		console.log(url);
 		const resp = await axios.get(url);
 		const options = resp.data.items.map( (item) => { return { title: item.snippet.title, id: item.id.videoId }});
 		const n = ~~(Math.random() * options.length)
@@ -76,17 +77,17 @@ async function stop() {
 	//exec('pkill -o chromium');
 }
 
-// nodeSchedule.scheduleJob('1-59/2 * * * *', start)
-// nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
+nodeSchedule.scheduleJob('1-59/2 * * * *', start)
+nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
 
-// Start up the video at 7am
-nodeSchedule.scheduleJob('0 7 * * *', start);
+// // Start up the video at 7am
+// nodeSchedule.scheduleJob('0 7 * * *', start);
 
-// Stop the video at 11am
-nodeSchedule.scheduleJob('0 11 * * *', stop);
+// // Stop the video at 11am
+// nodeSchedule.scheduleJob('0 11 * * *', stop);
 
-// Start up the video at 5pm
-nodeSchedule.scheduleJob('0 17 * * *', start);
+// // Start up the video at 5pm
+// nodeSchedule.scheduleJob('0 17 * * *', start);
 
-// Stop the video at 8pm
-nodeSchedule.scheduleJob('0 20 * * *', stop);
+// // Stop the video at 8pm
+// nodeSchedule.scheduleJob('0 20 * * *', stop);
