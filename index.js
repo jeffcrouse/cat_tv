@@ -80,17 +80,17 @@ async function stop() {
 	//exec('pkill -o chromium');
 }
 
-nodeSchedule.scheduleJob('1-59/2 * * * *', start)
-nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
+// nodeSchedule.scheduleJob('1-59/2 * * * *', start)
+// nodeSchedule.scheduleJob('0-58/2 * * * *', stop)
 
-// // Start up the video at 7am
-// nodeSchedule.scheduleJob('0 7 * * *', start);
+// Start up the video at 7am
+nodeSchedule.scheduleJob('0 7 * * *', start);
 
-// // Stop the video at 11am
-// nodeSchedule.scheduleJob('0 11 * * *', stop);
+// Stop the video at 11am
+nodeSchedule.scheduleJob('0 11 * * *', stop);
 
-// // Start up the video at 5pm
-// nodeSchedule.scheduleJob('0 17 * * *', start);
+// Start up the video at 5pm
+nodeSchedule.scheduleJob('0 17 * * *', start);
 
-// // Stop the video at 8pm
-// nodeSchedule.scheduleJob('0 20 * * *', stop);
+// Stop the video at 8pm
+nodeSchedule.scheduleJob('0 20 * * *', stop);
