@@ -6,8 +6,8 @@ const dayjs = require('dayjs');
 
 
 var proc = null;
-//const q = "🔴 24/7 LIVE: Cat TV for Cats to Watch 😺 Cute Birds Chipmunks Squirrels in the Forest 4K";
-const q = "🔴 24/7 LIVE: Cat TV ";
+const q = "🔴 24/7 LIVE: Cat TV for Cats to Watch 😺 Cute Birds Chipmunks Squirrels in the Forest 4K";
+//const q = "🔴 24/7 LIVE: Cat TV ";
 
 /**
  * 
@@ -18,6 +18,9 @@ async function get_video() {
 		const url = `https://youtube.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&part=snippet&q=${encodeURIComponent(q)}`;
 		console.log(url);
 		const resp = await axios.get(url);
+		if(resp.data.items.length==0) {
+			throw new Error("No videos found for search")
+		}
 		const options = resp.data.items.map( (item) => { return { title: item.snippet.title, id: item.id.videoId }});
 		const n = ~~(Math.random() * options.length)
 		return options[n];
