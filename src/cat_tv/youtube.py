@@ -21,7 +21,71 @@ class YouTubeManager:
             'format': 'best',
             'nocheckcertificate': True,
         }
+        # Cache successful videos to avoid re-searching
+        self._video_cache = []
+        self._cache_timestamp = 0
+        import time
+        self.time = time
         
+    def get_cached_videos(self) -> List[Dict[str, Any]]:
+        """Get cached cat TV videos if available and recent."""
+        # Cache videos for 1 hour
+        cache_lifetime = 3600
+        current_time = self.time.time()
+        
+        if (self._video_cache and 
+            current_time - self._cache_timestamp < cache_lifetime):
+            logger.info(f"Using cached videos ({len(self._video_cache)} available)")
+            return self._video_cache.copy()
+        
+        return []
+    
+    def search_videos_fast(self, query: str = "cat tv", max_results: int = 10) -> List[Dict[str, Any]]:
+        """Fast search with caching and optimized settings."""
+        # Try cache first
+        cached = self.get_cached_videos()
+        if cached:
+            return cached
+        
+        logger.info(f"Searching YouTube for: {query}")
+        try:
+            # Use faster settings
+            fast_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': True,  # Much faster - only gets basic info
+                'nocheckcertificate': True,
+            }
+            
+            with yt_dlp.YoutubeDL(fast_opts) as ydl:
+                search_query = f"ytsearch{max_results}:{query}"
+                result = ydl.extract_info(search_query, download=False)
+                
+                videos = []
+                if 'entries' in result:
+                    for entry in result['entries']:
+                        if entry and entry.get('id'):
+                            videos.append({
+                                'id': entry.get('id'),
+                                'title': entry.get('title', 'Unknown'),
+                                'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
+                                'duration': entry.get('duration'),
+                                'channel': entry.get('uploader', 'Unknown'),
+                                'is_live': entry.get('is_live', False),
+                            })
+                
+                # Cache the results
+                if videos:
+                    self._video_cache = videos
+                    self._cache_timestamp = self.time.time()
+                
+                logger.info(f"Found {len(videos)} videos for query: {query}")
+                return videos
+                
+        except Exception as e:
+            logger.error(f"Fast search failed: {e}")
+            return []
+    
     def search_videos(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search for YouTube videos by query."""
         try:

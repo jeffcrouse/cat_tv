@@ -75,7 +75,7 @@ class CatTVApp:
         self.running = False
         
     def setup(self):
-        """Setup the application."""
+        """Setup the application (lightweight setup for fast startup)."""
         setup_logging()
         logger.info("Starting Cat TV Application")
         logger.info(f"Running on Raspberry Pi: {config.IS_RASPBERRY_PI}")
@@ -84,14 +84,18 @@ class CatTVApp:
         init_db()
         setup_default_data()
         
-        # Create scheduler
+        # Create scheduler but don't set up schedules yet
         self.scheduler = CatTVScheduler()
-        self.scheduler.setup_schedule()
         
     def run_scheduler(self):
         """Run the scheduler in a separate thread."""
         logger.info("Starting Cat TV scheduler thread")
         try:
+            # Setup schedule here (this is where YouTube search happens)
+            logger.info("Setting up schedules in background...")
+            self.scheduler.setup_schedule()
+            
+            # Now run the scheduler
             self.scheduler.run()
         except Exception as e:
             logger.error(f"Scheduler error: {e}")
@@ -106,11 +110,14 @@ class CatTVApp:
         try:
             self.setup()
             
-            # Start scheduler in background thread
+            # Start web server immediately in main thread
+            logger.info(f"Starting web server on {config.FLASK_HOST}:{config.FLASK_PORT}")
+            logger.info("Web interface will be available immediately")
+            
+            # Start scheduler in background thread (this will do YouTube searches etc.)
             self.start_scheduler_thread()
             
-            # Start web server in main thread
-            logger.info(f"Starting web server on {config.FLASK_HOST}:{config.FLASK_PORT}")
+            # Run web server
             socketio.run(
                 app, 
                 host=config.FLASK_HOST, 

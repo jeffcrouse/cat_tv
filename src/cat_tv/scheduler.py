@@ -108,8 +108,8 @@ class CatTVScheduler:
             
         logger.info("Searching for Cat TV videos...")
         
-        # Search for cat TV videos, preferring longer ones
-        videos = self.youtube.search_videos("cat tv", max_results=20)
+        # Search for cat TV videos using fast cached search
+        videos = self.youtube.search_videos_fast("cat tv", max_results=10)
         
         if videos:
             # Filter for longer videos (over 30 minutes) or live streams
