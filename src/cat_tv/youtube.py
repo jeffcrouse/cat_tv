@@ -127,10 +127,11 @@ class YouTubeManager:
         
         if videos:
             # Prefer longer videos (likely to be compilations)
-            videos.sort(key=lambda x: x.get('duration', 0), reverse=True)
+            # Handle None durations (live streams)
+            videos.sort(key=lambda x: x.get('duration') or 0, reverse=True)
             
             # Filter for live streams or long videos
-            long_videos = [v for v in videos if v.get('duration', 0) > 1800 or v.get('is_live')]
+            long_videos = [v for v in videos if (v.get('duration') or 0) > 1800 or v.get('is_live')]
             
             if long_videos:
                 return random.choice(long_videos[:3])
