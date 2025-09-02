@@ -1,6 +1,8 @@
 """Flask web interface for Cat TV."""
 
 import logging
+import threading
+import time as time_module
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
@@ -25,6 +27,8 @@ youtube = YouTubeManager()
 
 # Global reference to scheduler (set by app.py)
 _scheduler = None
+_status_broadcast_thread = None
+_status_broadcast_running = False
 
 def set_scheduler(scheduler):
     """Set the scheduler reference so we can access its player."""
@@ -32,6 +36,62 @@ def set_scheduler(scheduler):
     _scheduler = scheduler
 
 logger = logging.getLogger(__name__)
+
+def get_status_data():
+    """Get current status data for broadcasting."""
+    # Use scheduler's player if available, fallback to local player
+    active_player = _scheduler.player if _scheduler else player
+    
+    # Check which schedule is currently active
+    current_schedule = get_current_active_schedule()
+    
+    return {
+        'display': display.get_status(),
+        'player': {
+            'is_playing': active_player.is_playing(),
+            'current_video': active_player.current_video
+        },
+        'scheduler': {
+            'is_play_time': _scheduler.is_play_time if _scheduler else False,
+            'current_schedule': current_schedule
+        },
+        'time': datetime.now().isoformat()
+    }
+
+def status_broadcast_worker():
+    """Background thread that broadcasts status every second."""
+    global _status_broadcast_running
+    
+    logger.info("Starting status broadcast worker")
+    
+    while _status_broadcast_running:
+        try:
+            status = get_status_data()
+            socketio.emit('status_update', status)
+        except Exception as e:
+            logger.error(f"Error broadcasting status: {e}")
+        
+        time_module.sleep(1)
+    
+    logger.info("Status broadcast worker stopped")
+
+def start_status_broadcast():
+    """Start the status broadcast background thread."""
+    global _status_broadcast_thread, _status_broadcast_running
+    
+    if not _status_broadcast_running:
+        _status_broadcast_running = True
+        _status_broadcast_thread = threading.Thread(target=status_broadcast_worker, daemon=True)
+        _status_broadcast_thread.start()
+        logger.info("Status broadcast started")
+
+def stop_status_broadcast():
+    """Stop the status broadcast background thread."""
+    global _status_broadcast_running
+    
+    if _status_broadcast_running:
+        _status_broadcast_running = False
+        logger.info("Status broadcast stopped")
 
 @app.route('/')
 def index():
@@ -41,18 +101,43 @@ def index():
 @app.route('/api/status')
 def get_status():
     """Get current system status."""
-    # Use scheduler's player if available, fallback to local player
-    active_player = _scheduler.player if _scheduler else player
-    
-    status = {
-        'display': display.get_status(),
-        'player': {
-            'is_playing': active_player.is_playing(),
-            'current_video': active_player.current_video
-        },
-        'time': datetime.now().isoformat()
-    }
-    return jsonify(status)
+    return jsonify(get_status_data())
+
+def get_current_active_schedule():
+    """Get the currently active schedule, if any."""
+    try:
+        now = datetime.now()
+        current_time = now.time()
+        current_day = now.weekday()  # 0=Monday, 6=Sunday
+        
+        with get_session() as session:
+            schedules = session.query(Schedule).filter_by(is_active=True).all()
+            
+            for sched in schedules:
+                if sched.is_active_on_day(current_day):
+                    # Check if we're in the time window
+                    if sched.start_time <= sched.end_time:
+                        # Normal schedule (e.g., 14:00 - 16:00)
+                        if sched.start_time <= current_time < sched.end_time:
+                            return {
+                                'name': sched.name,
+                                'start_time': sched.start_time.strftime('%I:%M %p'),
+                                'end_time': sched.end_time.strftime('%I:%M %p')
+                            }
+                    else:
+                        # Schedule crosses midnight (e.g., 22:00 - 02:00)
+                        if current_time >= sched.start_time or current_time < sched.end_time:
+                            return {
+                                'name': sched.name,
+                                'start_time': sched.start_time.strftime('%I:%M %p'),
+                                'end_time': sched.end_time.strftime('%I:%M %p')
+                            }
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error checking active schedule: {e}")
+        return None
 
 # Schedule Management
 @app.route('/api/schedules')
@@ -220,18 +305,14 @@ def handle_connect():
     """Handle client connection."""
     logger.info("Client connected")
     emit('connected', {'message': 'Connected to Cat TV'})
+    
+    # Start status broadcasting when first client connects
+    start_status_broadcast()
 
 @socketio.on('request_status')
 def handle_status_request():
     """Handle status request."""
-    status = {
-        'display': display.get_status(),
-        'player': {
-            'is_playing': player.is_playing(),
-            'current_video': player.current_video
-        }
-    }
-    emit('status_update', status)
+    emit('status_update', get_status_data())
 
 def run_server():
     """Run the Flask server."""
@@ -239,7 +320,11 @@ def run_server():
     init_db()
     
     logger.info(f"Starting web server on {config.FLASK_HOST}:{config.FLASK_PORT}")
-    socketio.run(app, host=config.FLASK_HOST, port=config.FLASK_PORT, debug=config.DEBUG)
+    try:
+        socketio.run(app, host=config.FLASK_HOST, port=config.FLASK_PORT, debug=config.DEBUG)
+    finally:
+        # Stop status broadcasting when server shuts down
+        stop_status_broadcast()
 
 if __name__ == '__main__':
     run_server()

@@ -9,7 +9,7 @@ try:
     from .config import config
     from .models import init_db
     from .scheduler import CatTVScheduler
-    from .web import app, socketio, set_scheduler
+    from .web import app, socketio, set_scheduler, start_status_broadcast
 except ImportError:
     # Direct execution - adjust path
     import os
@@ -17,7 +17,7 @@ except ImportError:
     from src.cat_tv.config import config
     from src.cat_tv.models import init_db
     from src.cat_tv.scheduler import CatTVScheduler
-    from src.cat_tv.web import app, socketio, set_scheduler
+    from src.cat_tv.web import app, socketio, set_scheduler, start_status_broadcast
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,9 @@ class CatTVApp:
             
             # Start scheduler in background thread (this will do YouTube searches etc.)
             self.start_scheduler_thread()
+            
+            # Start status broadcasting
+            start_status_broadcast()
             
             # Run web server
             socketio.run(
