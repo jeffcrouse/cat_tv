@@ -26,7 +26,8 @@ def check_pi_version():
                 os_info = f.read()
                 for line in os_info.split('\n'):
                     if line.startswith('PRETTY_NAME'):
-                        logger.info(f"💿 OS: {line.split('=')[1].strip('\"')}")
+                        os_name = line.split('=')[1].strip('"')
+                        logger.info(f"💿 OS: {os_name}")
         
         # Check kernel version
         result = subprocess.run(['uname', '-a'], capture_output=True, text=True)
