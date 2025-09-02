@@ -156,6 +156,83 @@
             color: #004499;
             margin-bottom: 5px;
         }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .days-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .day-checkbox input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -193,57 +270,31 @@
             </div>
         </div>
         
-        <!-- Schedule Control -->
+        <!-- Schedule Management -->
         <div class="card">
-            <div class="tab-container">
-                <button class="tab active" onclick="switchTab('info')">How It Works</button>
-                <button class="tab" onclick="switchTab('schedules')">Schedule</button>
-            </div>
-            
-            <!-- Info Tab -->
-            <div class="tab-content active" id="info-tab">
-                <h2>How Cat TV Works</h2>
-            <div class="info-box">
-                <h3>🎥 Continuous Cat Entertainment</h3>
-                <p>• Automatically searches YouTube for "cat tv" videos</p>
-                <p>• Prefers long videos (30+ minutes) and live streams</p>
-                <p>• Plays 12-hour bird compilations and nature videos</p>
-                <p>• Rotates videos every hour to prevent screen burn-in</p>
-                <p>• Automatically continues when videos end</p>
-            </div>
-            
-            <div class="info-box">
-                <h3>🎛 Manual Controls</h3>
-                <p>• Use "Play Manual Video" to test with specific YouTube URLs</p>
-                <p>• Stop/start playback as needed</p>
-                <p>• Control display power manually</p>
-                <p>• Check playback history below</p>
-            </div>
-            </div>
-            
-            <!-- Schedules Tab -->
-            <div class="tab-content" id="schedules-tab">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h2>Play Schedule</h2>
-                <div class="info-box">
-                    <h3>📅 Current Schedule</h3>
-                    <p>Cat TV automatically plays during these hours:</p>
-                </div>
-                <table id="schedules-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
-                            <th>Days</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <div style="margin-top: 15px;">
-                    <p><strong>Note:</strong> Schedule times are currently hardcoded. To modify the schedule, you'll need to edit the scheduler.py file and restart the service.</p>
-                </div>
+                <button onclick="showAddScheduleModal()">+ Add Schedule</button>
             </div>
+            
+            <div class="info-box">
+                <h3>📅 Automatic Playback Schedule</h3>
+                <p>Cat TV automatically plays during the configured hours. Videos will search for "cat tv" content and prefer long videos or live streams.</p>
+            </div>
+            
+            <table id="schedules-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
         
         <!-- History Card -->
@@ -262,6 +313,64 @@
         </div>
     </div>
     
+    <!-- Add Schedule Modal -->
+    <div class="modal" id="schedule-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Schedule</h3>
+                <button class="close-modal" onclick="closeModal('schedule-modal')">×</button>
+            </div>
+            <form id="schedule-form" onsubmit="saveSchedule(event)">
+                <div class="form-group">
+                    <label for="schedule-name">Name</label>
+                    <input type="text" id="schedule-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="schedule-start">Start Time</label>
+                    <input type="time" id="schedule-start" required>
+                </div>
+                <div class="form-group">
+                    <label for="schedule-end">End Time</label>
+                    <input type="time" id="schedule-end" required>
+                </div>
+                <div class="form-group">
+                    <label>Days of Week</label>
+                    <div class="days-selector">
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-0" checked>
+                            <label for="day-0">Mon</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-1" checked>
+                            <label for="day-1">Tue</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-2" checked>
+                            <label for="day-2">Wed</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-3" checked>
+                            <label for="day-3">Thu</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-4" checked>
+                            <label for="day-4">Fri</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-5" checked>
+                            <label for="day-5">Sat</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="day-6" checked>
+                            <label for="day-6">Sun</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit">Save Schedule</button>
+            </form>
+        </div>
+    </div>
+    
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         // Initialize Socket.IO
@@ -272,26 +381,20 @@
             console.log('Connected to server');
             refreshStatus();
             loadHistory();
+            loadSchedules();
         });
         
         socket.on('status_update', (data) => {
             updateStatus(data);
         });
         
-        // Tab switching
-        function switchTab(tabName) {
-            // Remove active class from all tabs and content
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked tab and corresponding content
-            event.target.classList.add('active');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            
-            // Load data for specific tabs
-            if (tabName === 'schedules') {
-                loadSchedules();
-            }
+        // Modal functions
+        function showAddScheduleModal() {
+            document.getElementById('schedule-modal').classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
         }
         
         // Status functions
@@ -404,6 +507,10 @@
                         <td>${schedule.end_time}</td>
                         <td>${days}</td>
                         <td>${statusText}</td>
+                        <td>
+                            <button onclick="editSchedule(${schedule.id})" style="margin-right: 5px;">Edit</button>
+                            <button onclick="deleteSchedule(${schedule.id})" class="btn-danger">Delete</button>
+                        </td>
                     `;
                     
                     // Highlight active schedule
@@ -413,6 +520,68 @@
                 });
             } catch (error) {
                 console.error('Error loading schedules:', error);
+            }
+        }
+        
+        async function saveSchedule(event) {
+            event.preventDefault();
+            
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                if (document.getElementById(`day-${i}`).checked) {
+                    days.push(i);
+                }
+            }
+            
+            const data = {
+                name: document.getElementById('schedule-name').value,
+                start_time: document.getElementById('schedule-start').value,
+                end_time: document.getElementById('schedule-end').value,
+                days_of_week: days.join(','),
+                is_active: true
+            };
+            
+            try {
+                const response = await fetch('/api/schedules', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    closeModal('schedule-modal');
+                    loadSchedules();
+                    document.getElementById('schedule-form').reset();
+                    // Check all days by default for next time
+                    for (let i = 0; i < 7; i++) {
+                        document.getElementById(`day-${i}`).checked = true;
+                    }
+                } else {
+                    alert('Error saving schedule: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error saving schedule: ' + error);
+            }
+        }
+        
+        async function editSchedule(id) {
+            alert('Edit schedule feature coming soon! For now, delete and recreate the schedule.');
+        }
+        
+        async function deleteSchedule(id) {
+            if (confirm('Delete this schedule?')) {
+                try {
+                    const response = await fetch(`/api/schedules/${id}`, {method: 'DELETE'});
+                    const result = await response.json();
+                    if (response.ok) {
+                        loadSchedules();
+                    } else {
+                        alert('Error deleting schedule: ' + result.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting schedule: ' + error);
+                }
             }
         }
         
