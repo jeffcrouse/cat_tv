@@ -124,6 +124,61 @@ def test_vlc_availability():
         print(f"Error testing VLC: {e}")
         return False
 
+def test_actual_playback():
+    """Test actual video playback with VLC."""
+    print("=" * 50)
+    print("Testing Actual VLC Playback")
+    print("=" * 50)
+    
+    from cat_tv.player import VideoPlayer
+    
+    player = VideoPlayer()
+    
+    # Get a working video
+    youtube = YouTubeManager()
+    videos = youtube.search_videos("cat tv", max_results=5)
+    
+    if not videos:
+        print("No videos found for playback test!")
+        return False
+    
+    # Try the first few videos
+    for i, video in enumerate(videos[:3]):
+        print(f"\nTrying video {i+1}: {video['title']}")
+        
+        # Get stream URL
+        stream_url = youtube.get_stream_url(video['url'])
+        if not stream_url:
+            print(f"  ❌ Failed to get stream URL")
+            continue
+            
+        print(f"  ✓ Got stream URL: {stream_url[:100]}...")
+        
+        # Try to play
+        print(f"  🎬 Attempting to play with VLC...")
+        success = player.play(stream_url, video['title'])
+        
+        if success:
+            print(f"  ✅ VLC started successfully!")
+            print(f"  📺 Playing: {video['title']}")
+            
+            # Check if still playing after a moment
+            import time
+            time.sleep(3)
+            if player.is_playing():
+                print(f"  🎵 Confirmed: Video is playing!")
+                player.stop()
+                print(f"  ⏹ Stopped playback")
+                return True
+            else:
+                print(f"  ❌ Video started but stopped immediately")
+                player.stop()
+        else:
+            print(f"  ❌ Failed to start VLC")
+    
+    print(f"\n❌ All playback attempts failed!")
+    return False
+
 def main():
     """Run all tests."""
     print("Cat TV Test Suite")
@@ -150,6 +205,11 @@ def main():
         print("Testing stream extraction with random video...")
         stream_url = test_stream_extraction(random_video['url'])
     
+    # Test 6: Actual playback
+    playback_working = False
+    if stream_url:
+        playback_working = test_actual_playback()
+    
     # Summary
     print("=" * 50)
     print("TEST SUMMARY")
@@ -159,9 +219,10 @@ def main():
     print(f"YouTube Search: {'✓' if videos else '✗'}")
     print(f"Random Video: {'✓' if random_video else '✗'}")
     print(f"Stream Extraction: {'✓' if stream_url else '✗'}")
+    print(f"Actual Playback: {'✓' if playback_working else '✗'}")
     
-    if all([vlc_available, videos or random_video, stream_url]):
-        print("\n🎉 All core components working! Cat TV should work properly.")
+    if all([vlc_available, videos or random_video, stream_url, playback_working]):
+        print("\n🎉 All components working! Cat TV should work properly.")
     else:
         print("\n⚠️  Some components have issues. Check the logs above.")
         

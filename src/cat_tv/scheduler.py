@@ -122,27 +122,49 @@ class CatTVScheduler:
                 logger.info(f"Trying video: {video['title']} ({video.get('duration', 'Live')} seconds)")
                 
                 # Get stream URL
+                logger.info(f"Getting stream URL for: {video['url']}")
                 stream_url = self.youtube.get_stream_url(video['url'])
+                
                 if stream_url:
-                    # Log playback
+                    logger.info(f"Got stream URL (length: {len(stream_url)} chars)")
+                    
+                    # Log playback attempt
                     with get_session() as session:
                         log_entry = PlaybackLog(
                             video_title=video['title'],
                             video_url=video['url'],
-                            status='playing'
+                            status='attempting'
                         )
                         session.add(log_entry)
                         session.commit()
                     
-                    # Play video
-                    if self.player.play(stream_url, video['title']):
-                        logger.info(f"Now playing: {video['title']}")
-                        return
+                    # Try to play video
+                    logger.info(f"Attempting to play with VLC: {video['title']}")
+                    play_success = self.player.play(stream_url, video['title'])
+                    
+                    if play_success:
+                        logger.info(f"✅ VLC started successfully: {video['title']}")
+                        
+                        # Wait a moment and check if still playing
+                        time.sleep(2)
+                        if self.player.is_playing():
+                            logger.info(f"✅ Confirmed playing: {video['title']}")
+                            
+                            # Update log to success
+                            with get_session() as session:
+                                log_entry.status = 'playing'
+                                session.add(log_entry)
+                                session.commit()
+                            return
+                        else:
+                            logger.warning(f"❌ VLC started but video stopped immediately: {video['title']}")
+                    else:
+                        logger.warning(f"❌ Failed to start VLC for: {video['title']}")
                 else:
-                    logger.warning(f"Could not get stream URL for: {video['title']}")
+                    logger.warning(f"❌ Could not get stream URL for: {video['title']}")
             
         # Fallback if nothing worked
-        logger.warning("No Cat TV videos found, trying fallback...")
+        logger.warning("No Cat TV videos worked, trying fallback...")
         self.play_fallback_video()
     
     def play_fallback_video(self):
