@@ -193,9 +193,16 @@
             </div>
         </div>
         
-        <!-- Info Card -->
+        <!-- Schedule Control -->
         <div class="card">
-            <h2>How Cat TV Works</h2>
+            <div class="tab-container">
+                <button class="tab active" onclick="switchTab('info')">How It Works</button>
+                <button class="tab" onclick="switchTab('schedules')">Schedule</button>
+            </div>
+            
+            <!-- Info Tab -->
+            <div class="tab-content active" id="info-tab">
+                <h2>How Cat TV Works</h2>
             <div class="info-box">
                 <h3>🎥 Continuous Cat Entertainment</h3>
                 <p>• Automatically searches YouTube for "cat tv" videos</p>
@@ -211,6 +218,31 @@
                 <p>• Stop/start playback as needed</p>
                 <p>• Control display power manually</p>
                 <p>• Check playback history below</p>
+            </div>
+            </div>
+            
+            <!-- Schedules Tab -->
+            <div class="tab-content" id="schedules-tab">
+                <h2>Play Schedule</h2>
+                <div class="info-box">
+                    <h3>📅 Current Schedule</h3>
+                    <p>Cat TV automatically plays during these hours:</p>
+                </div>
+                <table id="schedules-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div style="margin-top: 15px;">
+                    <p><strong>Note:</strong> Schedule times are currently hardcoded. To modify the schedule, you'll need to edit the scheduler.py file and restart the service.</p>
+                </div>
             </div>
         </div>
         
@@ -245,6 +277,22 @@
         socket.on('status_update', (data) => {
             updateStatus(data);
         });
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load data for specific tabs
+            if (tabName === 'schedules') {
+                loadSchedules();
+            }
+        }
         
         // Status functions
         async function refreshStatus() {
@@ -316,6 +364,55 @@
                 refreshStatus();
             } catch (error) {
                 alert('Error controlling display: ' + error);
+            }
+        }
+        
+        // Schedule management
+        async function loadSchedules() {
+            try {
+                const response = await fetch('/api/schedules');
+                const schedules = await response.json();
+                
+                const tbody = document.querySelector('#schedules-table tbody');
+                tbody.innerHTML = '';
+                
+                // Get current time to show if schedule is active
+                const now = new Date();
+                const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+                const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc
+                // Convert to our format (0 = Monday)
+                const dayOfWeek = currentDay === 0 ? 6 : currentDay - 1;
+                
+                schedules.forEach(schedule => {
+                    const days = schedule.days_of_week.split(',').map(d => 
+                        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][parseInt(d)]
+                    ).join(', ');
+                    
+                    // Check if currently active
+                    const isCurrentlyActive = schedule.is_active && 
+                        schedule.days_of_week.split(',').includes(dayOfWeek.toString()) &&
+                        currentTime >= schedule.start_time && 
+                        currentTime <= schedule.end_time;
+                    
+                    const statusText = isCurrentlyActive ? '🟢 ACTIVE NOW' : 
+                                     schedule.is_active ? '⭕ Scheduled' : '❌ Disabled';
+                    
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><strong>${schedule.name}</strong></td>
+                        <td>${schedule.start_time}</td>
+                        <td>${schedule.end_time}</td>
+                        <td>${days}</td>
+                        <td>${statusText}</td>
+                    `;
+                    
+                    // Highlight active schedule
+                    if (isCurrentlyActive) {
+                        row.style.backgroundColor = '#d4f4dd';
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading schedules:', error);
             }
         }
         

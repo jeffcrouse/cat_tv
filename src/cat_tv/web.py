@@ -43,7 +43,49 @@ def get_status():
     }
     return jsonify(status)
 
-# Simple Cat TV - no channel/schedule management needed
+# Schedule Management
+@app.route('/api/schedules')
+def get_schedules():
+    """Get current hardcoded schedules."""
+    # Return the current hardcoded schedule
+    schedules = [
+        {
+            'id': 1,
+            'name': 'Morning Play',
+            'start_time': '07:00',
+            'end_time': '11:00',
+            'days_of_week': '0,1,2,3,4,5,6',
+            'is_active': True
+        },
+        {
+            'id': 2, 
+            'name': 'Evening Play',
+            'start_time': '17:00',
+            'end_time': '20:00',
+            'days_of_week': '0,1,2,3,4,5,6',
+            'is_active': True
+        }
+    ]
+    return jsonify(schedules)
+
+@app.route('/api/schedules', methods=['POST'])
+def add_schedule():
+    """Add a new schedule (will update the hardcoded ones)."""
+    data = request.json
+    # For now, just return success - would need to modify scheduler.py to be dynamic
+    return jsonify({'message': 'Schedule feature coming soon - currently uses hardcoded morning/evening times'})
+
+@app.route('/api/schedules/<int:schedule_id>', methods=['PUT']) 
+def update_schedule(schedule_id):
+    """Update a schedule."""
+    data = request.json
+    # For now, just return success - would need to modify scheduler.py to be dynamic
+    return jsonify({'message': 'Schedule update feature coming soon - currently uses hardcoded times'})
+
+@app.route('/api/schedules/<int:schedule_id>', methods=['DELETE'])
+def delete_schedule(schedule_id):
+    """Delete a schedule."""
+    return jsonify({'message': 'Schedule delete feature coming soon - currently uses hardcoded times'})
 
 # Playback Control
 @app.route('/api/play', methods=['POST'])
