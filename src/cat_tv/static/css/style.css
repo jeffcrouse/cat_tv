@@ -291,6 +291,22 @@ input, select {
         width: 100%;
     }
     
+    /* Schedule header mobile fix */
+    .schedule-header {
+        flex-direction: column !important;
+        gap: 15px;
+        align-items: stretch !important;
+    }
+    
+    .schedule-header h2 {
+        margin-bottom: 0;
+    }
+    
+    .schedule-header button {
+        width: 100%;
+        margin: 0;
+    }
+    
     /* Mobile table styles */
     table {
         font-size: 0.9em;

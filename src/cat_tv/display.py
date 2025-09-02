@@ -116,13 +116,37 @@ class DisplayController:
                     break
             
             # Try to read current blank status
+            blank_status = None
+            
             if self.working_fb_file:
                 try:
                     with open(self.working_fb_file, 'r') as f:
                         blank_status = f.read().strip()
-                        status['is_blank'] = blank_status == '1'
                 except Exception as e:
-                    logger.debug(f"Could not read blank status: {e}")
+                    logger.debug(f"Could not read blank status directly: {e}")
+            
+            # If direct read failed, try with sudo
+            if blank_status is None:
+                for fb_file in self.fb_files:
+                    if os.path.exists(fb_file):
+                        try:
+                            result = subprocess.run(
+                                ['sudo', 'cat', fb_file], 
+                                capture_output=True, text=True, timeout=5
+                            )
+                            if result.returncode == 0:
+                                blank_status = result.stdout.strip()
+                                break
+                        except Exception as e:
+                            logger.debug(f"Could not read {fb_file} with sudo: {e}")
+            
+            # Set blank status if we got it
+            if blank_status is not None:
+                status['is_blank'] = blank_status == '1'
+            else:
+                # Default to assuming display is on if we can't read status
+                status['is_blank'] = False
+                logger.debug("Could not determine display blank status, assuming ON")
             
             return status
             

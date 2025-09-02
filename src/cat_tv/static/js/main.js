@@ -101,6 +101,18 @@ async function toggleDisplay() {
         
         if (response.ok) {
             console.log(`Display ${action}: ${result.message}`);
+            
+            // Wait a moment for the display state to change, then refresh status
+            setTimeout(async () => {
+                try {
+                    const newStatusResponse = await fetch('/api/status');
+                    const newStatusData = await newStatusResponse.json();
+                    updateStatus(newStatusData);
+                } catch (e) {
+                    console.error('Failed to refresh status:', e);
+                }
+            }, 1000);
+            
         } else {
             alert(`Error: ${result.error || 'Unknown error'}`);
         }
@@ -109,11 +121,13 @@ async function toggleDisplay() {
         console.error('Display control error:', error);
         alert('Failed to control display: ' + error.message);
     } finally {
-        // Re-enable button
-        const toggleButton = document.getElementById('display-toggle');
-        if (toggleButton) {
-            toggleButton.disabled = false;
-        }
+        // Re-enable button after a short delay
+        setTimeout(() => {
+            const toggleButton = document.getElementById('display-toggle');
+            if (toggleButton) {
+                toggleButton.disabled = false;
+            }
+        }, 1000);
     }
 }
 
