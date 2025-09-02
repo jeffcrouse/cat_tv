@@ -1,5 +1,6 @@
 """Display control for Raspberry Pi."""
 
+import os
 import subprocess
 import logging
 from typing import Optional
@@ -58,12 +59,18 @@ class DisplayController:
             # Method 4: DPMS via /sys (for some displays)
             try:
                 logger.info("Trying DPMS power management")
-                with open("/sys/class/drm/card0-HDMI-A-1/dpms", "w") as f:
-                    f.write("0")  # 0 = on
-                logger.info("DPMS on successful")
-                success = True
+                dpms_path = "/sys/class/drm/card0-HDMI-A-1/dpms"
+                if os.path.exists(dpms_path):
+                    with open(dpms_path, "w") as f:
+                        f.write("0")  # 0 = on
+                    logger.info("DPMS on successful")
+                    success = True
+                else:
+                    logger.info("DPMS path not found, skipping")
             except (FileNotFoundError, PermissionError) as e:
                 logger.info(f"DPMS control failed: {e}")
+            except Exception as e:
+                logger.warning(f"DPMS unexpected error: {e}")
             
             self.is_on = True
             if success:
@@ -114,12 +121,18 @@ class DisplayController:
             # Method 4: DPMS via /sys (for some displays)
             try:
                 logger.info("Trying DPMS power management")
-                with open("/sys/class/drm/card0-HDMI-A-1/dpms", "w") as f:
-                    f.write("3")  # 3 = off
-                logger.info("DPMS off successful")
-                success = True
+                dpms_path = "/sys/class/drm/card0-HDMI-A-1/dpms"
+                if os.path.exists(dpms_path):
+                    with open(dpms_path, "w") as f:
+                        f.write("3")  # 3 = off
+                    logger.info("DPMS off successful")
+                    success = True
+                else:
+                    logger.info("DPMS path not found, skipping")
             except (FileNotFoundError, PermissionError) as e:
                 logger.info(f"DPMS control failed: {e}")
+            except Exception as e:
+                logger.warning(f"DPMS unexpected error: {e}")
             
             self.is_on = False
             if success:

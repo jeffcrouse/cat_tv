@@ -124,8 +124,8 @@ class CatTVScheduler:
             # Sort by duration (longest first), handling None durations
             long_videos.sort(key=lambda x: x.get('duration') or float('inf'), reverse=True)
             
-            # Try the top 3 longest videos
-            for video in long_videos[:3]:
+            # Try only the first good video for faster startup
+            for video in long_videos[:1]:  # Only try 1 video instead of 3
                 logger.info(f"Trying video: {video['title']} ({video.get('duration', 'Live')} seconds)")
                 
                 # Get stream URL
@@ -169,6 +169,16 @@ class CatTVScheduler:
                         logger.warning(f"❌ Failed to start VLC for: {video['title']}")
                 else:
                     logger.warning(f"❌ Could not get stream URL for: {video['title']}")
+                    
+            # If first video fails, try a couple more
+            if len(long_videos) > 1:
+                logger.info("First video failed, trying backup videos...")
+                for video in long_videos[1:3]:
+                    logger.info(f"Trying backup: {video['title']}")
+                    stream_url = self.youtube.get_stream_url(video['url'])
+                    if stream_url and self.player.play(stream_url, video['title']):
+                        logger.info(f"✅ Backup video started: {video['title']}")
+                        return
             
         # Fallback if nothing worked
         logger.warning("No Cat TV videos worked, trying fallback...")

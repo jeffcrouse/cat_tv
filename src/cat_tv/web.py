@@ -166,17 +166,26 @@ def stop_video():
 @app.route('/api/display/<action>', methods=['POST'])
 def control_display(action):
     """Control display power."""
-    if action == 'on':
-        success = display.turn_on()
-    elif action == 'off':
-        success = display.turn_off()
-    else:
-        return jsonify({'error': 'Invalid action'}), 400
-    
-    if success:
-        socketio.emit('display_update', {'is_on': action == 'on'})
-        return jsonify({'message': f'Display turned {action}'})
-    return jsonify({'error': f'Failed to turn {action} display'}), 500
+    try:
+        logger.info(f"Display control request: {action}")
+        
+        if action == 'on':
+            success = display.turn_on()
+        elif action == 'off':
+            success = display.turn_off()
+        else:
+            return jsonify({'error': 'Invalid action'}), 400
+        
+        logger.info(f"Display control result: {success}")
+        
+        if success:
+            socketio.emit('display_update', {'is_on': action == 'on'})
+            return jsonify({'message': f'Display turned {action}'})
+        return jsonify({'error': f'Failed to turn {action} display'}), 500
+        
+    except Exception as e:
+        logger.error(f"Display control error: {e}")
+        return jsonify({'error': f'Display control exception: {str(e)}'}), 500
 
 # Playback History
 @app.route('/api/history')
