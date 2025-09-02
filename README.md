@@ -7,7 +7,6 @@ An automated YouTube video player for Raspberry Pi that plays cat entertainment 
 - **CLI-First Design**: Runs without desktop environment for maximum reliability
 - **Web Interface**: Manage channels and schedules from any device on your network
 - **Automatic Scheduling**: Play videos only during specified hours
-- **Screen Control**: Automatically turns display on/off to save power
 - **Video Rotation**: Prevents screen burn-in by rotating between channels
 - **Fallback Videos**: Automatically finds alternative videos if channels fail
 - **Logging**: Comprehensive logging for debugging and monitoring
@@ -167,9 +166,6 @@ Add your own channels through the web interface!
 
 ## Troubleshooting
 
-### Display doesn't turn off
-- Ensure your Pi user is in the `video` group: `sudo usermod -a -G video $USER`
-- Try different display control methods in the code
 
 ### Videos won't play
 - Check VLC is installed: `which cvlc`
@@ -197,7 +193,6 @@ cat_tv/
 │   ├── web.py            # Flask web interface
 │   ├── config.py         # Configuration management
 │   ├── player.py         # Video player control
-│   ├── display.py        # Display power management
 │   ├── youtube.py        # YouTube integration
 │   ├── scheduler.py      # Schedule management
 │   ├── models/           # Database models

@@ -9,7 +9,6 @@ from typing import Optional, List
 
 from .models import get_session, Schedule, PlaybackLog
 from .player import VideoPlayer
-from .display import DisplayController
 from .youtube import YouTubeManager
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,6 @@ class CatTVScheduler:
     
     def __init__(self):
         self.player = VideoPlayer()
-        self.display = DisplayController()
         self.youtube = YouTubeManager()
         self.is_play_time = False
         self.current_channel_index = 0
@@ -68,18 +66,30 @@ class CatTVScheduler:
                         # Normal schedule (e.g., 9:00 - 17:00)
                         if sched.start_time <= current_time < sched.end_time:
                             logger.info(f"Currently in schedule: {sched.name}")
-                            self.start_scheduled_playback(f"{sched.name} (current time)")
+                            # Only start if not already playing
+                            if not self.is_play_time:
+                                self.start_scheduled_playback(f"{sched.name} (current time)")
+                            else:
+                                logger.info("Already in play time, continuing current video")
                             return
                     else:
                         # Schedule crosses midnight (e.g., 22:00 - 02:00)
                         if current_time >= sched.start_time or current_time < sched.end_time:
                             logger.info(f"Currently in schedule: {sched.name}")
-                            self.start_scheduled_playback(f"{sched.name} (current time)")
+                            # Only start if not already playing
+                            if not self.is_play_time:
+                                self.start_scheduled_playback(f"{sched.name} (current time)")
+                            else:
+                                logger.info("Already in play time, continuing current video")
                             return
         
         # No active schedule
-        logger.info("Outside all scheduled hours, stopping playback")
-        self.stop_playback("Outside scheduled hours")
+        logger.info("Outside all scheduled hours")
+        if self.is_play_time:
+            logger.info("Stopping playback - outside scheduled hours")
+            self.stop_playback("Outside scheduled hours")
+        else:
+            logger.info("Already stopped, no action needed")
 
     def start_scheduled_playback(self, schedule_name: str):
         """Start scheduled cat TV playback."""
@@ -87,8 +97,6 @@ class CatTVScheduler:
         
         if not self.is_play_time:
             self.is_play_time = True
-            self.display.turn_on()
-            time.sleep(1)  # Give display time to turn on
             self.play_cat_tv_video()
     
     def stop_playback(self, reason: str = "Manual stop"):
@@ -98,8 +106,6 @@ class CatTVScheduler:
         if self.is_play_time:
             self.is_play_time = False
             self.player.stop()
-            time.sleep(1)  # Give player time to stop
-            self.display.turn_off()
     
     def play_cat_tv_video(self):
         """Search and play long Cat TV videos."""

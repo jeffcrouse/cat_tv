@@ -31,9 +31,6 @@ class Config:
     FULLSCREEN = True
     AUDIO_OUTPUT = os.getenv("AUDIO_OUTPUT", "hdmi")  # hdmi, local, or both
     
-    # Display settings
-    DISPLAY_TIMEOUT = int(os.getenv("DISPLAY_TIMEOUT", "30"))  # seconds between videos
-    ROTATION_INTERVAL = int(os.getenv("ROTATION_INTERVAL", "3600"))  # seconds
     
     # Raspberry Pi specific
     IS_RASPBERRY_PI = os.path.exists("/proc/device-tree/model")

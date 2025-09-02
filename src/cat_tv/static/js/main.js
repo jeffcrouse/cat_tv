@@ -25,13 +25,6 @@ function closeModal(modalId) {
 
 // Status functions
 function updateStatus(data) {
-    // Update display status
-    if (data.display) {
-        const displayEl = document.getElementById('display-status');
-        displayEl.querySelector('.value').textContent = data.display.is_on ? 'ON' : 'OFF';
-        displayEl.className = `status-item ${data.display.is_on ? 'active' : 'inactive'}`;
-    }
-    
     // Update player status
     if (data.player) {
         const playerEl = document.getElementById('player-status');
@@ -62,10 +55,21 @@ async function loadSchedules() {
         
         // Get current time to show if schedule is active
         const now = new Date();
-        const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+        const currentTime = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true}); // 12-hour format
         const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc
         // Convert to our format (0 = Monday)
         const dayOfWeek = currentDay === 0 ? 6 : currentDay - 1;
+        
+        // Helper function to convert time to minutes for comparison
+        const timeToMinutes = (timeStr) => {
+            const [time, period] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            return hours * 60 + minutes;
+        };
+        
+        const currentMinutes = timeToMinutes(currentTime);
         
         schedules.forEach(schedule => {
             const days = schedule.days_of_week.split(',').map(d => 
@@ -73,10 +77,21 @@ async function loadSchedules() {
             ).join(', ');
             
             // Check if currently active
+            const startMinutes = timeToMinutes(schedule.start_time);
+            const endMinutes = timeToMinutes(schedule.end_time);
+            
+            let isInTimeWindow;
+            if (startMinutes <= endMinutes) {
+                // Normal schedule (e.g., 2:00 PM - 5:00 PM)
+                isInTimeWindow = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+            } else {
+                // Schedule crosses midnight (e.g., 11:00 PM - 2:00 AM)
+                isInTimeWindow = currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+            }
+            
             const isCurrentlyActive = schedule.is_active && 
                 schedule.days_of_week.split(',').includes(dayOfWeek.toString()) &&
-                currentTime >= schedule.start_time && 
-                currentTime <= schedule.end_time;
+                isInTimeWindow;
             
             const statusText = isCurrentlyActive ? '🟢 ACTIVE NOW' : 
                              schedule.is_active ? '⭕ Scheduled' : '❌ Disabled';

@@ -11,7 +11,6 @@ from datetime import datetime, time
 from .config import config
 from .models import init_db, get_session, Schedule, PlaybackLog
 from .player import VideoPlayer
-from .display import DisplayController
 from .youtube import YouTubeManager
 
 # Initialize Flask app
@@ -24,7 +23,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize components
 player = VideoPlayer()  # This will be replaced by scheduler's player
-display = DisplayController()
 youtube = YouTubeManager()
 
 # Global reference to scheduler (set by app.py)
@@ -48,7 +46,6 @@ def get_status_data():
     current_schedule = get_current_active_schedule()
     
     return {
-        'display': display.get_status(),
         'player': {
             'is_playing': active_player.is_playing(),
             'current_video': active_player.current_video
@@ -188,6 +185,11 @@ def add_schedule():
             # Notify scheduler to reload schedules
             socketio.emit('schedule_updated', {'action': 'reload'})
             
+            # Tell scheduler to reload and check current time
+            if _scheduler:
+                logger.info("Schedule added, reloading scheduler and checking current time")
+                _scheduler.setup_schedule()  # Reload schedules and check if should be playing
+            
             return jsonify({'id': schedule.id, 'message': 'Schedule added successfully'})
             
     except ValueError as e:
@@ -219,6 +221,11 @@ def update_schedule(schedule_id):
         # Notify scheduler to reload schedules
         socketio.emit('schedule_updated', {'action': 'reload'})
         
+        # Tell scheduler to reload and check current time
+        if _scheduler:
+            logger.info("Schedule updated, reloading scheduler and checking current time")
+            _scheduler.setup_schedule()  # Reload schedules and check if should be playing
+        
         return jsonify({'message': 'Schedule updated successfully'})
 
 @app.route('/api/schedules/<int:schedule_id>', methods=['DELETE'])
@@ -235,6 +242,11 @@ def delete_schedule(schedule_id):
         # Notify scheduler to reload schedules
         socketio.emit('schedule_updated', {'action': 'reload'})
         
+        # Tell scheduler to reload and check current time
+        if _scheduler:
+            logger.info("Schedule deleted, reloading scheduler and checking current time")
+            _scheduler.setup_schedule()  # Reload schedules and check if should be playing
+        
         return jsonify({'message': 'Schedule deleted successfully'})
 
 # Playback Control
@@ -246,7 +258,6 @@ def play_video():
     title = data.get('title', 'Manual Play')
     
     if url:
-        display.turn_on()
         stream_url = youtube.get_stream_url(url) if url.startswith('http') else url
         if stream_url and player.play(stream_url, title):
             socketio.emit('status_update', {'playing': True, 'video': title})
@@ -263,29 +274,6 @@ def stop_video():
     socketio.emit('status_update', {'playing': False})
     return jsonify({'message': 'Video stopped'})
 
-@app.route('/api/display/<action>', methods=['POST'])
-def control_display(action):
-    """Control display power."""
-    try:
-        logger.info(f"Display control request: {action}")
-        
-        if action == 'on':
-            success = display.turn_on()
-        elif action == 'off':
-            success = display.turn_off()
-        else:
-            return jsonify({'error': 'Invalid action'}), 400
-        
-        logger.info(f"Display control result: {success}")
-        
-        if success:
-            socketio.emit('display_update', {'is_on': action == 'on'})
-            return jsonify({'message': f'Display turned {action}'})
-        return jsonify({'error': f'Failed to turn {action} display'}), 500
-        
-    except Exception as e:
-        logger.error(f"Display control error: {e}")
-        return jsonify({'error': f'Display control exception: {str(e)}'}), 500
 
 # Playback History
 @app.route('/api/history')
