@@ -7,7 +7,7 @@ from flask_socketio import SocketIO, emit
 from datetime import datetime, time
 
 from .config import config
-from .models import init_db, get_session, Channel, Schedule, PlaybackLog
+from .models import init_db, get_session, PlaybackLog
 from .player import VideoPlayer
 from .display import DisplayController
 from .youtube import YouTubeManager
@@ -43,137 +43,7 @@ def get_status():
     }
     return jsonify(status)
 
-# Channel Management
-@app.route('/api/channels')
-def get_channels():
-    """Get all channels."""
-    with get_session() as session:
-        channels = session.query(Channel).all()
-        return jsonify([{
-            'id': c.id,
-            'name': c.name,
-            'url': c.url,
-            'search_query': c.search_query,
-            'is_active': c.is_active,
-            'priority': c.priority
-        } for c in channels])
-
-@app.route('/api/channels', methods=['POST'])
-def add_channel():
-    """Add a new channel."""
-    data = request.json
-    
-    with get_session() as session:
-        channel = Channel(
-            name=data['name'],
-            url=data.get('url', ''),
-            search_query=data.get('search_query', ''),
-            is_active=data.get('is_active', True),
-            priority=data.get('priority', 0)
-        )
-        session.add(channel)
-        session.commit()
-        
-        return jsonify({'id': channel.id, 'message': 'Channel added successfully'})
-
-@app.route('/api/channels/<int:channel_id>', methods=['PUT'])
-def update_channel(channel_id):
-    """Update a channel."""
-    data = request.json
-    
-    with get_session() as session:
-        channel = session.query(Channel).get(channel_id)
-        if not channel:
-            return jsonify({'error': 'Channel not found'}), 404
-        
-        channel.name = data.get('name', channel.name)
-        channel.url = data.get('url', channel.url)
-        channel.search_query = data.get('search_query', channel.search_query)
-        channel.is_active = data.get('is_active', channel.is_active)
-        channel.priority = data.get('priority', channel.priority)
-        session.commit()
-        
-        return jsonify({'message': 'Channel updated successfully'})
-
-@app.route('/api/channels/<int:channel_id>', methods=['DELETE'])
-def delete_channel(channel_id):
-    """Delete a channel."""
-    with get_session() as session:
-        channel = session.query(Channel).get(channel_id)
-        if not channel:
-            return jsonify({'error': 'Channel not found'}), 404
-        
-        session.delete(channel)
-        session.commit()
-        
-        return jsonify({'message': 'Channel deleted successfully'})
-
-# Schedule Management
-@app.route('/api/schedules')
-def get_schedules():
-    """Get all schedules."""
-    with get_session() as session:
-        schedules = session.query(Schedule).all()
-        return jsonify([{
-            'id': s.id,
-            'name': s.name,
-            'start_time': s.start_time.strftime('%H:%M'),
-            'end_time': s.end_time.strftime('%H:%M'),
-            'days_of_week': s.days_of_week,
-            'is_active': s.is_active
-        } for s in schedules])
-
-@app.route('/api/schedules', methods=['POST'])
-def add_schedule():
-    """Add a new schedule."""
-    data = request.json
-    
-    with get_session() as session:
-        schedule = Schedule(
-            name=data['name'],
-            start_time=time.fromisoformat(data['start_time']),
-            end_time=time.fromisoformat(data['end_time']),
-            days_of_week=data.get('days_of_week', '0,1,2,3,4,5,6'),
-            is_active=data.get('is_active', True)
-        )
-        session.add(schedule)
-        session.commit()
-        
-        return jsonify({'id': schedule.id, 'message': 'Schedule added successfully'})
-
-@app.route('/api/schedules/<int:schedule_id>', methods=['PUT'])
-def update_schedule(schedule_id):
-    """Update a schedule."""
-    data = request.json
-    
-    with get_session() as session:
-        schedule = session.query(Schedule).get(schedule_id)
-        if not schedule:
-            return jsonify({'error': 'Schedule not found'}), 404
-        
-        schedule.name = data.get('name', schedule.name)
-        if 'start_time' in data:
-            schedule.start_time = time.fromisoformat(data['start_time'])
-        if 'end_time' in data:
-            schedule.end_time = time.fromisoformat(data['end_time'])
-        schedule.days_of_week = data.get('days_of_week', schedule.days_of_week)
-        schedule.is_active = data.get('is_active', schedule.is_active)
-        session.commit()
-        
-        return jsonify({'message': 'Schedule updated successfully'})
-
-@app.route('/api/schedules/<int:schedule_id>', methods=['DELETE'])
-def delete_schedule(schedule_id):
-    """Delete a schedule."""
-    with get_session() as session:
-        schedule = session.query(Schedule).get(schedule_id)
-        if not schedule:
-            return jsonify({'error': 'Schedule not found'}), 404
-        
-        session.delete(schedule)
-        session.commit()
-        
-        return jsonify({'message': 'Schedule deleted successfully'})
+# Simple Cat TV - no channel/schedule management needed
 
 # Playback Control
 @app.route('/api/play', methods=['POST'])

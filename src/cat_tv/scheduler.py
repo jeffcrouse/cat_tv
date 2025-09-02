@@ -7,7 +7,7 @@ import random
 from datetime import datetime, time as dt_time
 from typing import Optional, List
 
-from .models import get_session, Channel, Schedule, PlaybackLog
+from .models import get_session, PlaybackLog
 from .player import VideoPlayer
 from .display import DisplayController
 from .youtube import YouTubeManager
@@ -25,72 +25,68 @@ class CatTVScheduler:
         self.current_channel_index = 0
         
     def setup_schedule(self):
-        """Setup the schedule based on database entries."""
+        """Setup scheduled Cat TV playback."""
         # Clear existing schedule
         schedule.clear()
         
-        with get_session() as session:
-            schedules = session.query(Schedule).filter_by(is_active=True).all()
-            
-            for sched in schedules:
-                # Schedule start time
-                start_time = sched.start_time.strftime("%H:%M")
-                schedule.every().day.at(start_time).do(self.start_playback, sched.name)
-                logger.info(f"Scheduled start at {start_time} for {sched.name}")
-                
-                # Schedule end time
-                end_time = sched.end_time.strftime("%H:%M")
-                schedule.every().day.at(end_time).do(self.stop_playback, sched.name)
-                logger.info(f"Scheduled stop at {end_time} for {sched.name}")
+        logger.info("Setting up Cat TV schedule")
         
-        # Check current time to see if we should be playing
-        self.check_current_schedule()
+        # Default schedule - Morning and Evening
+        # Morning: 7:00 AM - 11:00 AM
+        schedule.every().day.at("07:00").do(self.start_scheduled_playback, "Morning")
+        schedule.every().day.at("11:00").do(self.stop_playback, "Morning ended")
         
-        # Schedule video rotation every hour during play time
+        # Evening: 5:00 PM - 8:00 PM  
+        schedule.every().day.at("17:00").do(self.start_scheduled_playback, "Evening")
+        schedule.every().day.at("20:00").do(self.stop_playback, "Evening ended")
+        
+        logger.info("Scheduled Cat TV for:")
+        logger.info("  Morning: 7:00 AM - 11:00 AM")
+        logger.info("  Evening: 5:00 PM - 8:00 PM")
+        
+        # Check if we should be playing right now
+        self.check_current_time()
+        
+        # Schedule video rotation every hour to prevent burn-in
         schedule.every().hour.do(self.rotate_video)
         
-    def check_current_schedule(self):
-        """Check if current time is within any active schedule."""
+    
+    def check_current_time(self):
+        """Check if current time is within scheduled play times."""
         now = datetime.now()
         current_time = now.time()
-        current_day = now.weekday()
         
-        with get_session() as session:
-            schedules = session.query(Schedule).filter_by(is_active=True).all()
-            
-            for sched in schedules:
-                if sched.is_active_on_day(current_day):
-                    # Handle schedules that cross midnight
-                    if sched.start_time <= sched.end_time:
-                        # Normal schedule (e.g., 9:00 - 17:00)
-                        if sched.start_time <= current_time <= sched.end_time:
-                            logger.info(f"Currently in schedule: {sched.name}")
-                            self.start_playback(sched.name)
-                            return
-                    else:
-                        # Schedule crosses midnight (e.g., 22:00 - 02:00)
-                        if current_time >= sched.start_time or current_time <= sched.end_time:
-                            logger.info(f"Currently in schedule: {sched.name}")
-                            self.start_playback(sched.name)
-                            return
+        # Morning schedule: 7:00 AM - 11:00 AM
+        morning_start = dt_time(7, 0)
+        morning_end = dt_time(11, 0)
         
-        # No active schedule
-        logger.info("No active schedule at current time")
-        self.stop_playback("No active schedule")
-    
-    def start_playback(self, schedule_name: str):
-        """Start playing videos."""
-        logger.info(f"Starting playback for schedule: {schedule_name}")
+        # Evening schedule: 5:00 PM - 8:00 PM
+        evening_start = dt_time(17, 0)
+        evening_end = dt_time(20, 0)
+        
+        if morning_start <= current_time < morning_end:
+            logger.info("Currently in morning schedule, starting playback")
+            self.start_scheduled_playback("Morning (current time)")
+        elif evening_start <= current_time < evening_end:
+            logger.info("Currently in evening schedule, starting playback")
+            self.start_scheduled_playback("Evening (current time)")
+        else:
+            logger.info("Outside scheduled hours, stopping playback")
+            self.stop_playback("Outside scheduled hours")
+
+    def start_scheduled_playback(self, schedule_name: str):
+        """Start scheduled cat TV playback."""
+        logger.info(f"Starting Cat TV playback for: {schedule_name}")
         
         if not self.is_play_time:
             self.is_play_time = True
             self.display.turn_on()
             time.sleep(1)  # Give display time to turn on
-            self.play_next_video()
+            self.play_cat_tv_video()
     
-    def stop_playback(self, schedule_name: str):
+    def stop_playback(self, reason: str = "Manual stop"):
         """Stop playing videos."""
-        logger.info(f"Stopping playback for schedule: {schedule_name}")
+        logger.info(f"Stopping playback: {reason}")
         
         if self.is_play_time:
             self.is_play_time = False
@@ -98,58 +94,56 @@ class CatTVScheduler:
             time.sleep(1)  # Give player time to stop
             self.display.turn_off()
     
-    def play_next_video(self):
-        """Play the next video from available channels."""
+    def play_cat_tv_video(self):
+        """Search and play long Cat TV videos."""
         if not self.is_play_time:
             return
             
-        with get_session() as session:
-            # Get active channels
-            channels = session.query(Channel).filter_by(is_active=True).order_by(Channel.priority.desc()).all()
+        logger.info("Searching for Cat TV videos...")
+        
+        # Search for cat TV videos, preferring longer ones
+        videos = self.youtube.search_videos("cat tv", max_results=20)
+        
+        if videos:
+            # Filter for longer videos (over 30 minutes) or live streams
+            long_videos = [v for v in videos if 
+                          (v.get('duration') and v['duration'] > 1800) or  # 30+ minutes
+                          v.get('is_live')]
             
-            if not channels:
-                logger.warning("No active channels found")
-                self.play_fallback_video()
-                return
+            if not long_videos:
+                # If no long videos, take any videos we found
+                long_videos = videos
             
-            # Rotate through channels
-            channel = channels[self.current_channel_index % len(channels)]
-            self.current_channel_index += 1
+            # Sort by duration (longest first), handling None durations
+            long_videos.sort(key=lambda x: x.get('duration') or float('inf'), reverse=True)
             
-            video = None
-            
-            # Try to get video from channel
-            if channel.search_query:
-                videos = self.youtube.search_videos(channel.search_query, max_results=5)
-                if videos:
-                    video = random.choice(videos)
-            elif channel.url:
-                videos = self.youtube.get_channel_videos(channel.url, max_results=10)
-                if videos:
-                    video = random.choice(videos)
-            
-            if video:
+            # Try the top 3 longest videos
+            for video in long_videos[:3]:
+                logger.info(f"Trying video: {video['title']} ({video.get('duration', 'Live')} seconds)")
+                
                 # Get stream URL
                 stream_url = self.youtube.get_stream_url(video['url'])
                 if stream_url:
                     # Log playback
-                    log_entry = PlaybackLog(
-                        channel_id=channel.id,
-                        video_title=video['title'],
-                        video_url=video['url'],
-                        status='playing'
-                    )
-                    session.add(log_entry)
-                    session.commit()
+                    with get_session() as session:
+                        log_entry = PlaybackLog(
+                            video_title=video['title'],
+                            video_url=video['url'],
+                            status='playing'
+                        )
+                        session.add(log_entry)
+                        session.commit()
                     
                     # Play video
                     if self.player.play(stream_url, video['title']):
-                        logger.info(f"Playing: {video['title']}")
+                        logger.info(f"Now playing: {video['title']}")
                         return
+                else:
+                    logger.warning(f"Could not get stream URL for: {video['title']}")
             
-            # Fallback if no video found
-            logger.warning(f"Could not get video from channel: {channel.name}")
-            self.play_fallback_video()
+        # Fallback if nothing worked
+        logger.warning("No Cat TV videos found, trying fallback...")
+        self.play_fallback_video()
     
     def play_fallback_video(self):
         """Play a fallback video when regular channels fail."""
@@ -167,10 +161,10 @@ class CatTVScheduler:
     def rotate_video(self):
         """Rotate to a different video to prevent burn-in."""
         if self.is_play_time:
-            logger.info("Rotating video")
+            logger.info("Rotating to next Cat TV video")
             self.player.stop()
             time.sleep(2)
-            self.play_next_video()
+            self.play_cat_tv_video()
     
     def run(self):
         """Run the scheduler."""
@@ -182,9 +176,9 @@ class CatTVScheduler:
                 
                 # Check if current video has ended
                 if self.is_play_time and not self.player.is_playing():
-                    logger.info("Video ended, playing next")
+                    logger.info("Video ended, playing next Cat TV video")
                     time.sleep(5)  # Brief pause between videos
-                    self.play_next_video()
+                    self.play_cat_tv_video()
                 
                 time.sleep(10)  # Check every 10 seconds
                 

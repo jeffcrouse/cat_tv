@@ -10,7 +10,6 @@ try:
     from .models import init_db
     from .scheduler import CatTVScheduler
     from .web import app, socketio
-    from .main import setup_logging, setup_default_data
 except ImportError:
     # Direct execution - adjust path
     import os
@@ -19,9 +18,27 @@ except ImportError:
     from src.cat_tv.models import init_db
     from src.cat_tv.scheduler import CatTVScheduler
     from src.cat_tv.web import app, socketio
-    from src.cat_tv.main import setup_logging, setup_default_data
 
 logger = logging.getLogger(__name__)
+
+def setup_logging():
+    """Setup logging configuration."""
+    config.ensure_directories()
+    
+    logging.basicConfig(
+        level=getattr(logging, config.LOG_LEVEL),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(config.LOG_FILE),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+def setup_default_data():
+    """Setup default data if none exists."""
+    # We don't need default channels/schedules anymore since we just search "cat tv"
+    # Only keeping playback logs
+    pass
 
 class CatTVApp:
     """Main Cat TV application that runs both scheduler and web server."""

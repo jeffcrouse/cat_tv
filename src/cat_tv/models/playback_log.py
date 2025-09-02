@@ -10,7 +10,7 @@ class PlaybackLog(Base):
     __tablename__ = "playback_logs"
     
     id = Column(Integer, primary_key=True)
-    channel_id = Column(Integer, ForeignKey("channels.id"))
+    # No longer need channel_id since we simplified to just search "cat tv"
     video_title = Column(String(500))
     video_url = Column(String(500))
     started_at = Column(DateTime, server_default=func.now())
