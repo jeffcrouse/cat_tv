@@ -3,6 +3,7 @@
 import subprocess
 import logging
 import time
+import os
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -36,10 +37,19 @@ class VideoPlayer:
                 raise ValueError(f"Unknown player backend: {self.backend}")
             
             logger.debug(f"Running command: {' '.join(cmd)}")
+            
+            # Set up environment for SSH compatibility
+            env = os.environ.copy()
+            if config.IS_RASPBERRY_PI:
+                # Ensure we can access framebuffer over SSH
+                env.pop('DISPLAY', None)  # Remove DISPLAY if set
+                env['HOME'] = os.path.expanduser('~')  # Ensure HOME is set
+            
             self.current_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
+                env=env
             )
             
             return True
@@ -77,16 +87,19 @@ class VideoPlayer:
         cmd = [
             "cvlc",  # Console VLC (no GUI)
             "--fullscreen",
-            "--no-video-title-show",
+            "--no-video-title-show", 
             "--no-mouse-events",
             "--no-keyboard-events",
+            "--intf", "dummy",  # No interface
+            "--quiet",  # Reduce verbose output
         ]
         
         if config.IS_RASPBERRY_PI:
-            # Use framebuffer output on Raspberry Pi
+            # Use framebuffer output on Raspberry Pi - works over SSH
             cmd.extend([
                 "--vout", "fb",
-                "--fbdev", "/dev/fb0"
+                "--fbdev", "/dev/fb0",
+                "--no-xlib",  # Don't try to use X11
             ])
         
         # Audio output configuration
