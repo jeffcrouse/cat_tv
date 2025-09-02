@@ -15,7 +15,9 @@ from .display import DisplayController
 from .youtube import YouTubeManager
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static')
 app.config['SECRET_KEY'] = config.SECRET_KEY
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
