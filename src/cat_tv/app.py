@@ -35,10 +35,36 @@ def setup_logging():
     )
 
 def setup_default_data():
-    """Setup default data if none exists."""
-    # We don't need default channels/schedules anymore since we just search "cat tv"
-    # Only keeping playback logs
-    pass
+    """Setup default schedules if none exist."""
+    from .models import get_session, Schedule
+    from datetime import time
+    
+    with get_session() as session:
+        # Check if we have any schedules
+        if session.query(Schedule).count() == 0:
+            # Add default schedules (matching original times)
+            default_schedules = [
+                Schedule(
+                    name="Morning Play",
+                    start_time=time(7, 0),
+                    end_time=time(11, 0),
+                    days_of_week="0,1,2,3,4,5,6",
+                    is_active=True
+                ),
+                Schedule(
+                    name="Evening Play", 
+                    start_time=time(17, 0),
+                    end_time=time(20, 0),
+                    days_of_week="0,1,2,3,4,5,6",
+                    is_active=True
+                ),
+            ]
+            
+            for schedule in default_schedules:
+                session.add(schedule)
+            
+            session.commit()
+            logger.info("Added default schedules")
 
 class CatTVApp:
     """Main Cat TV application that runs both scheduler and web server."""

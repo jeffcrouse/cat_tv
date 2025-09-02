@@ -7,7 +7,7 @@ import random
 from datetime import datetime, time as dt_time
 from typing import Optional, List
 
-from .models import get_session, PlaybackLog
+from .models import get_session, Schedule, PlaybackLog
 from .player import VideoPlayer
 from .display import DisplayController
 from .youtube import YouTubeManager
@@ -25,24 +25,25 @@ class CatTVScheduler:
         self.current_channel_index = 0
         
     def setup_schedule(self):
-        """Setup scheduled Cat TV playback."""
+        """Setup scheduled Cat TV playback from database."""
         # Clear existing schedule
         schedule.clear()
         
-        logger.info("Setting up Cat TV schedule")
+        logger.info("Setting up Cat TV schedule from database")
         
-        # Default schedule - Morning and Evening
-        # Morning: 7:00 AM - 11:00 AM
-        schedule.every().day.at("07:00").do(self.start_scheduled_playback, "Morning")
-        schedule.every().day.at("11:00").do(self.stop_playback, "Morning ended")
-        
-        # Evening: 5:00 PM - 8:00 PM  
-        schedule.every().day.at("17:00").do(self.start_scheduled_playback, "Evening")
-        schedule.every().day.at("20:00").do(self.stop_playback, "Evening ended")
-        
-        logger.info("Scheduled Cat TV for:")
-        logger.info("  Morning: 7:00 AM - 11:00 AM")
-        logger.info("  Evening: 5:00 PM - 8:00 PM")
+        with get_session() as session:
+            schedules = session.query(Schedule).filter_by(is_active=True).all()
+            
+            for sched in schedules:
+                # Schedule start time
+                start_time = sched.start_time.strftime("%H:%M")
+                schedule.every().day.at(start_time).do(self.start_scheduled_playback, sched.name)
+                logger.info(f"Scheduled start at {start_time} for {sched.name}")
+                
+                # Schedule end time
+                end_time = sched.end_time.strftime("%H:%M")
+                schedule.every().day.at(end_time).do(self.stop_playback, f"{sched.name} ended")
+                logger.info(f"Scheduled stop at {end_time} for {sched.name}")
         
         # Check if we should be playing right now
         self.check_current_time()
@@ -52,27 +53,33 @@ class CatTVScheduler:
         
     
     def check_current_time(self):
-        """Check if current time is within scheduled play times."""
+        """Check if current time is within any scheduled play times."""
         now = datetime.now()
         current_time = now.time()
+        current_day = now.weekday()  # 0=Monday, 6=Sunday
         
-        # Morning schedule: 7:00 AM - 11:00 AM
-        morning_start = dt_time(7, 0)
-        morning_end = dt_time(11, 0)
+        with get_session() as session:
+            schedules = session.query(Schedule).filter_by(is_active=True).all()
+            
+            for sched in schedules:
+                if sched.is_active_on_day(current_day):
+                    # Handle schedules that cross midnight
+                    if sched.start_time <= sched.end_time:
+                        # Normal schedule (e.g., 9:00 - 17:00)
+                        if sched.start_time <= current_time < sched.end_time:
+                            logger.info(f"Currently in schedule: {sched.name}")
+                            self.start_scheduled_playback(f"{sched.name} (current time)")
+                            return
+                    else:
+                        # Schedule crosses midnight (e.g., 22:00 - 02:00)
+                        if current_time >= sched.start_time or current_time < sched.end_time:
+                            logger.info(f"Currently in schedule: {sched.name}")
+                            self.start_scheduled_playback(f"{sched.name} (current time)")
+                            return
         
-        # Evening schedule: 5:00 PM - 8:00 PM
-        evening_start = dt_time(17, 0)
-        evening_end = dt_time(20, 0)
-        
-        if morning_start <= current_time < morning_end:
-            logger.info("Currently in morning schedule, starting playback")
-            self.start_scheduled_playback("Morning (current time)")
-        elif evening_start <= current_time < evening_end:
-            logger.info("Currently in evening schedule, starting playback")
-            self.start_scheduled_playback("Evening (current time)")
-        else:
-            logger.info("Outside scheduled hours, stopping playback")
-            self.stop_playback("Outside scheduled hours")
+        # No active schedule
+        logger.info("Outside all scheduled hours, stopping playback")
+        self.stop_playback("Outside scheduled hours")
 
     def start_scheduled_playback(self, schedule_name: str):
         """Start scheduled cat TV playback."""

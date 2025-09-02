@@ -526,6 +526,8 @@
         async function saveSchedule(event) {
             event.preventDefault();
             
+            console.log('Saving schedule...');
+            
             const days = [];
             for (let i = 0; i < 7; i++) {
                 if (document.getElementById(`day-${i}`).checked) {
@@ -541,15 +543,33 @@
                 is_active: true
             };
             
+            console.log('Schedule data:', data);
+            
+            // Basic validation
+            if (!data.name || !data.start_time || !data.end_time) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            if (days.length === 0) {
+                alert('Please select at least one day');
+                return;
+            }
+            
             try {
+                console.log('Sending request...');
                 const response = await fetch('/api/schedules', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
                 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response data:', result);
+                
                 if (response.ok) {
+                    alert('Schedule saved successfully!');
                     closeModal('schedule-modal');
                     loadSchedules();
                     document.getElementById('schedule-form').reset();
@@ -558,10 +578,11 @@
                         document.getElementById(`day-${i}`).checked = true;
                     }
                 } else {
-                    alert('Error saving schedule: ' + result.message);
+                    alert('Error saving schedule: ' + (result.message || result.error || 'Unknown error'));
                 }
             } catch (error) {
-                alert('Error saving schedule: ' + error);
+                console.error('Save error:', error);
+                alert('Error saving schedule: ' + error.message);
             }
         }
         
