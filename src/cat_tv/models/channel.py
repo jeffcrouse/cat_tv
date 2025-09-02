@@ -11,7 +11,7 @@ class Channel(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
-    url = Column(String(500), nullable=False)
+    url = Column(String(500), nullable=True)
     channel_id = Column(String(100))
     search_query = Column(String(500))  # For searching specific content
     is_active = Column(Boolean, default=True)

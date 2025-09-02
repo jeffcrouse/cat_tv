@@ -4,11 +4,22 @@ import logging
 import sys
 import threading
 
-from .config import config
-from .models import init_db
-from .scheduler import CatTVScheduler
-from .web import app, socketio
-from .main import setup_logging, setup_default_data
+# Handle both direct execution and module execution
+try:
+    from .config import config
+    from .models import init_db
+    from .scheduler import CatTVScheduler
+    from .web import app, socketio
+    from .main import setup_logging, setup_default_data
+except ImportError:
+    # Direct execution - adjust path
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    from src.cat_tv.config import config
+    from src.cat_tv.models import init_db
+    from src.cat_tv.scheduler import CatTVScheduler
+    from src.cat_tv.web import app, socketio
+    from src.cat_tv.main import setup_logging, setup_default_data
 
 logger = logging.getLogger(__name__)
 
