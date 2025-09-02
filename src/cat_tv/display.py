@@ -20,63 +20,32 @@ class DisplayController:
         try:
             logger.info("Attempting to turn on display...")
             
-            # Try multiple methods for better compatibility
-            success = False
-            
+            # Try simple vcgencmd first
             if config.USE_VCGENCMD:
-                # Method 1: vcgencmd display_power
-                logger.info("Trying vcgencmd display_power")
-                result = subprocess.run(["vcgencmd", "display_power", "1"], 
-                                      capture_output=True, text=True)
-                logger.info(f"vcgencmd result: {result.stdout.strip()}")
-                if result.returncode == 0:
-                    success = True
-                
-                # Method 2: HDMI on via tvservice (for HDMI displays)
-                logger.info("Trying tvservice to turn on HDMI")
-                result = subprocess.run(["tvservice", "-p"], 
-                                      capture_output=True, text=True)
-                logger.info(f"tvservice result: {result.returncode}")
-                if result.returncode == 0:
-                    success = True
-                    # After turning HDMI back on, may need to refresh framebuffer
-                    try:
-                        subprocess.run(["fbset", "-depth", "8"], check=False)
-                        subprocess.run(["fbset", "-depth", "16"], check=False)
-                    except:
-                        pass
+                try:
+                    result = subprocess.run(["vcgencmd", "display_power", "1"], 
+                                          capture_output=True, text=True, timeout=10)
+                    logger.info(f"vcgencmd on result: {result.returncode}")
+                    if result.returncode == 0:
+                        self.is_on = True
+                        logger.info("✅ Display turned on via vcgencmd")
+                        return True
+                except Exception as e:
+                    logger.warning(f"vcgencmd failed: {e}")
             
-            # Method 3: Framebuffer unblank
+            # Try framebuffer as fallback
             try:
-                logger.info("Trying framebuffer unblank")
                 with open("/sys/class/graphics/fb0/blank", "w") as f:
                     f.write("0")
-                logger.info("Framebuffer unblank successful")
-                success = True
-            except (FileNotFoundError, PermissionError) as e:
-                logger.info(f"Framebuffer unblank failed: {e}")
-            
-            # Method 4: DPMS via /sys (for some displays)
-            try:
-                logger.info("Trying DPMS power management")
-                dpms_path = "/sys/class/drm/card0-HDMI-A-1/dpms"
-                if os.path.exists(dpms_path):
-                    with open(dpms_path, "w") as f:
-                        f.write("0")  # 0 = on
-                    logger.info("DPMS on successful")
-                    success = True
-                else:
-                    logger.info("DPMS path not found, skipping")
-            except (FileNotFoundError, PermissionError) as e:
-                logger.info(f"DPMS control failed: {e}")
+                self.is_on = True
+                logger.info("✅ Display turned on via framebuffer")
+                return True
             except Exception as e:
-                logger.warning(f"DPMS unexpected error: {e}")
+                logger.warning(f"Framebuffer failed: {e}")
             
+            # If all else fails, just return success
+            logger.warning("⚠️ Display control methods not available, returning success")
             self.is_on = True
-            if success:
-                logger.info("✅ Display turned on (one or more methods succeeded)")
-            else:
-                logger.warning("⚠️ All methods attempted but may not have worked")
             return True
             
         except Exception as e:
@@ -88,57 +57,32 @@ class DisplayController:
         try:
             logger.info("Attempting to turn off display...")
             
-            # Try multiple methods for better compatibility
-            success = False
-            
+            # Try simple vcgencmd first
             if config.USE_VCGENCMD:
-                # Method 1: vcgencmd display_power
-                logger.info("Trying vcgencmd display_power")
-                result = subprocess.run(["vcgencmd", "display_power", "0"], 
-                                      capture_output=True, text=True)
-                logger.info(f"vcgencmd result: {result.stdout.strip()}")
-                if result.returncode == 0:
-                    success = True
-                
-                # Method 2: HDMI off via tvservice (for HDMI displays)
-                logger.info("Trying tvservice to turn off HDMI")
-                result = subprocess.run(["tvservice", "-o"], 
-                                      capture_output=True, text=True)
-                logger.info(f"tvservice result: {result.returncode}")
-                if result.returncode == 0:
-                    success = True
-                
-            # Method 3: Framebuffer blank
+                try:
+                    result = subprocess.run(["vcgencmd", "display_power", "0"], 
+                                          capture_output=True, text=True, timeout=10)
+                    logger.info(f"vcgencmd off result: {result.returncode}")
+                    if result.returncode == 0:
+                        self.is_on = False
+                        logger.info("✅ Display turned off via vcgencmd")
+                        return True
+                except Exception as e:
+                    logger.warning(f"vcgencmd failed: {e}")
+            
+            # Try framebuffer as fallback
             try:
-                logger.info("Trying framebuffer blank")
                 with open("/sys/class/graphics/fb0/blank", "w") as f:
                     f.write("1")
-                logger.info("Framebuffer blank successful")
-                success = True
-            except (FileNotFoundError, PermissionError) as e:
-                logger.info(f"Framebuffer blank failed: {e}")
-            
-            # Method 4: DPMS via /sys (for some displays)
-            try:
-                logger.info("Trying DPMS power management")
-                dpms_path = "/sys/class/drm/card0-HDMI-A-1/dpms"
-                if os.path.exists(dpms_path):
-                    with open(dpms_path, "w") as f:
-                        f.write("3")  # 3 = off
-                    logger.info("DPMS off successful")
-                    success = True
-                else:
-                    logger.info("DPMS path not found, skipping")
-            except (FileNotFoundError, PermissionError) as e:
-                logger.info(f"DPMS control failed: {e}")
+                self.is_on = False
+                logger.info("✅ Display turned off via framebuffer")
+                return True
             except Exception as e:
-                logger.warning(f"DPMS unexpected error: {e}")
+                logger.warning(f"Framebuffer failed: {e}")
             
+            # If all else fails, just return success 
+            logger.warning("⚠️ Display control methods not available, returning success")
             self.is_on = False
-            if success:
-                logger.info("✅ Display turned off (one or more methods succeeded)")
-            else:
-                logger.warning("⚠️ All methods attempted but may not have worked")
             return True
             
         except Exception as e:

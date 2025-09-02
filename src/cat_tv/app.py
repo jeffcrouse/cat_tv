@@ -9,7 +9,7 @@ try:
     from .config import config
     from .models import init_db
     from .scheduler import CatTVScheduler
-    from .web import app, socketio
+    from .web import app, socketio, set_scheduler
 except ImportError:
     # Direct execution - adjust path
     import os
@@ -17,7 +17,7 @@ except ImportError:
     from src.cat_tv.config import config
     from src.cat_tv.models import init_db
     from src.cat_tv.scheduler import CatTVScheduler
-    from src.cat_tv.web import app, socketio
+    from src.cat_tv.web import app, socketio, set_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,9 @@ class CatTVApp:
         
         # Create scheduler but don't set up schedules yet
         self.scheduler = CatTVScheduler()
+        
+        # Share scheduler with web interface for player status
+        set_scheduler(self.scheduler)
         
     def run_scheduler(self):
         """Run the scheduler in a separate thread."""

@@ -19,9 +19,17 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize components
-player = VideoPlayer()
+player = VideoPlayer()  # This will be replaced by scheduler's player
 display = DisplayController()
 youtube = YouTubeManager()
+
+# Global reference to scheduler (set by app.py)
+_scheduler = None
+
+def set_scheduler(scheduler):
+    """Set the scheduler reference so we can access its player."""
+    global _scheduler
+    _scheduler = scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +41,14 @@ def index():
 @app.route('/api/status')
 def get_status():
     """Get current system status."""
+    # Use scheduler's player if available, fallback to local player
+    active_player = _scheduler.player if _scheduler else player
+    
     status = {
         'display': display.get_status(),
         'player': {
-            'is_playing': player.is_playing(),
-            'current_video': player.current_video
+            'is_playing': active_player.is_playing(),
+            'current_video': active_player.current_video
         },
         'time': datetime.now().isoformat()
     }
@@ -52,8 +63,8 @@ def get_schedules():
         return jsonify([{
             'id': s.id,
             'name': s.name,
-            'start_time': s.start_time.strftime('%H:%M'),
-            'end_time': s.end_time.strftime('%H:%M'),
+            'start_time': s.start_time.strftime('%I:%M %p'),
+            'end_time': s.end_time.strftime('%I:%M %p'),
             'days_of_week': s.days_of_week,
             'is_active': s.is_active
         } for s in schedules])
@@ -159,7 +170,9 @@ def play_video():
 @app.route('/api/stop', methods=['POST'])
 def stop_video():
     """Stop current video."""
-    player.stop()
+    # Use scheduler's player if available, fallback to local player
+    active_player = _scheduler.player if _scheduler else player
+    active_player.stop()
     socketio.emit('status_update', {'playing': False})
     return jsonify({'message': 'Video stopped'})
 
