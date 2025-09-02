@@ -242,8 +242,6 @@ def main():
     print("Make sure you can see the screen to observe the results.")
     print()
     
-    input("Press Enter to start the test, or Ctrl+C to cancel...")
-    
     # Check permissions first
     has_permissions = check_permissions()
     if not has_permissions:
