@@ -12,6 +12,7 @@ from .config import config
 from .models import init_db, get_session, Schedule, PlaybackLog
 from .player import VideoPlayer
 from .youtube import YouTubeManager
+from .display import DisplayController
 
 # Initialize Flask app
 app = Flask(__name__, 
@@ -24,6 +25,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Initialize components
 player = VideoPlayer()  # This will be replaced by scheduler's player
 youtube = YouTubeManager()
+display = DisplayController()
 
 # Global reference to scheduler (set by app.py)
 _scheduler = None
@@ -54,6 +56,7 @@ def get_status_data():
             'is_play_time': _scheduler.is_play_time if _scheduler else False,
             'current_schedule': current_schedule
         },
+        'display': display.get_status(),
         'time': datetime.now().isoformat()
     }
 
@@ -274,6 +277,27 @@ def stop_video():
     socketio.emit('status_update', {'playing': False})
     return jsonify({'message': 'Video stopped'})
 
+# Display Control
+@app.route('/api/display/on', methods=['POST'])
+def display_on():
+    """Turn display on."""
+    if display.turn_on():
+        return jsonify({'message': 'Display turned on'})
+    else:
+        return jsonify({'error': 'Failed to turn display on'}), 500
+
+@app.route('/api/display/off', methods=['POST'])
+def display_off():
+    """Turn display off."""
+    if display.turn_off():
+        return jsonify({'message': 'Display turned off'})
+    else:
+        return jsonify({'error': 'Failed to turn display off'}), 500
+
+@app.route('/api/display/status')
+def display_status():
+    """Get display status."""
+    return jsonify(display.get_status())
 
 # Playback History
 @app.route('/api/history')

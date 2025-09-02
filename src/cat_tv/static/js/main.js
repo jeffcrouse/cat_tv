@@ -36,11 +36,44 @@ function updateStatus(data) {
         videoEl.querySelector('.value').textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
     }
     
+    // Update display status
+    if (data.display) {
+        const displayEl = document.getElementById('display-status');
+        if (data.display.available) {
+            const isOn = !data.display.is_blank;
+            displayEl.querySelector('.value').textContent = isOn ? 'ON' : 'OFF';
+            displayEl.className = `status-item ${isOn ? 'active' : 'inactive'}`;
+        } else {
+            displayEl.querySelector('.value').textContent = 'N/A';
+            displayEl.className = 'status-item';
+        }
+    }
+    
     // Update time
     if (data.time) {
         const time = new Date(data.time);
         document.getElementById('system-time').querySelector('.value').textContent = 
             time.toLocaleTimeString();
+    }
+}
+
+// Display control
+async function controlDisplay(action) {
+    try {
+        const response = await fetch(`/api/display/${action}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            console.log(`Display ${action}: ${result.message}`);
+        } else {
+            alert(`Error: ${result.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Display control error:', error);
+        alert('Failed to control display: ' + error.message);
     }
 }
 
