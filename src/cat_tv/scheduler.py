@@ -91,7 +91,12 @@ class CatTVScheduler:
             logger.info("Stopping playback - outside scheduled hours")
             self.stop_playback("Outside scheduled hours")
         else:
-            logger.info("Already stopped, no action needed")
+            logger.info("Already stopped, ensuring display is off...")
+            # Turn off display when outside scheduled hours (even if not playing)
+            if self.display.turn_off():
+                logger.info("✅ Display turned off - outside scheduled hours")
+            else:
+                logger.warning("⚠️ Could not turn off display")
 
     def start_scheduled_playback(self, schedule_name: str):
         """Start scheduled cat TV playback."""
