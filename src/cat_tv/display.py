@@ -17,47 +17,71 @@ class DisplayController:
     def turn_on(self) -> bool:
         """Turn on the display."""
         try:
+            logger.info("Attempting to turn on display...")
+            
             if config.USE_VCGENCMD:
                 # Raspberry Pi specific using vcgencmd
-                subprocess.run(["vcgencmd", "display_power", "1"], check=True)
+                logger.info("Using vcgencmd to turn on display")
+                result = subprocess.run(["vcgencmd", "display_power", "1"], 
+                                      capture_output=True, text=True)
+                logger.info(f"vcgencmd result: {result.stdout.strip()}, stderr: {result.stderr.strip()}")
+                if result.returncode != 0:
+                    raise subprocess.CalledProcessError(result.returncode, "vcgencmd")
             else:
                 # Try generic Linux framebuffer unblank
+                logger.info("Trying framebuffer unblank")
                 try:
                     with open("/sys/class/graphics/fb0/blank", "w") as f:
                         f.write("0")
+                    logger.info("Framebuffer unblank successful")
                 except FileNotFoundError:
                     # Try xset if available (fallback for development)
-                    subprocess.run(["xset", "dpms", "force", "on"], check=False)
+                    logger.info("Framebuffer not available, trying xset")
+                    result = subprocess.run(["xset", "dpms", "force", "on"], 
+                                          capture_output=True, text=True)
+                    logger.info(f"xset result: {result.returncode}")
             
             self.is_on = True
-            logger.info("Display turned on")
+            logger.info("✅ Display turned on successfully")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to turn on display: {e}")
+            logger.error(f"❌ Failed to turn on display: {e}")
             return False
     
     def turn_off(self) -> bool:
         """Turn off the display."""
         try:
+            logger.info("Attempting to turn off display...")
+            
             if config.USE_VCGENCMD:
                 # Raspberry Pi specific using vcgencmd
-                subprocess.run(["vcgencmd", "display_power", "0"], check=True)
+                logger.info("Using vcgencmd to turn off display")
+                result = subprocess.run(["vcgencmd", "display_power", "0"], 
+                                      capture_output=True, text=True)
+                logger.info(f"vcgencmd result: {result.stdout.strip()}, stderr: {result.stderr.strip()}")
+                if result.returncode != 0:
+                    raise subprocess.CalledProcessError(result.returncode, "vcgencmd")
             else:
                 # Try generic Linux framebuffer blank
+                logger.info("Trying framebuffer blank")
                 try:
                     with open("/sys/class/graphics/fb0/blank", "w") as f:
                         f.write("1")
+                    logger.info("Framebuffer blank successful")
                 except FileNotFoundError:
                     # Try xset if available (fallback for development)
-                    subprocess.run(["xset", "dpms", "force", "off"], check=False)
+                    logger.info("Framebuffer not available, trying xset")
+                    result = subprocess.run(["xset", "dpms", "force", "off"], 
+                                          capture_output=True, text=True)
+                    logger.info(f"xset result: {result.returncode}")
             
             self.is_on = False
-            logger.info("Display turned off")
+            logger.info("✅ Display turned off successfully")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to turn off display: {e}")
+            logger.error(f"❌ Failed to turn off display: {e}")
             return False
     
     def get_status(self) -> dict:
