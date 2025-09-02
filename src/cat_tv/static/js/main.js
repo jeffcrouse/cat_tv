@@ -39,13 +39,26 @@ function updateStatus(data) {
     // Update display status
     if (data.display) {
         const displayEl = document.getElementById('display-status');
+        const toggleButton = document.getElementById('display-toggle');
+        
         if (data.display.available) {
             const isOn = !data.display.is_blank;
             displayEl.querySelector('.value').textContent = isOn ? 'ON' : 'OFF';
             displayEl.className = `status-item ${isOn ? 'active' : 'inactive'}`;
+            
+            // Update toggle button text and style
+            if (toggleButton) {
+                toggleButton.textContent = isOn ? 'Turn Display Off' : 'Turn Display On';
+                toggleButton.className = isOn ? 'btn-danger' : 'btn-success';
+            }
         } else {
             displayEl.querySelector('.value').textContent = 'N/A';
             displayEl.className = 'status-item';
+            
+            if (toggleButton) {
+                toggleButton.textContent = 'Display N/A';
+                toggleButton.disabled = true;
+            }
         }
     }
     
@@ -58,8 +71,28 @@ function updateStatus(data) {
 }
 
 // Display control
-async function controlDisplay(action) {
+async function toggleDisplay() {
     try {
+        // Get current display status
+        const statusResponse = await fetch('/api/display/status');
+        const statusData = await statusResponse.json();
+        
+        if (!statusData.available) {
+            alert('Display control not available');
+            return;
+        }
+        
+        // Determine action based on current state
+        const isCurrentlyOn = !statusData.is_blank;
+        const action = isCurrentlyOn ? 'off' : 'on';
+        
+        // Disable button during operation
+        const toggleButton = document.getElementById('display-toggle');
+        if (toggleButton) {
+            toggleButton.disabled = true;
+            toggleButton.textContent = 'Working...';
+        }
+        
         const response = await fetch(`/api/display/${action}`, {
             method: 'POST'
         });
@@ -71,9 +104,16 @@ async function controlDisplay(action) {
         } else {
             alert(`Error: ${result.error || 'Unknown error'}`);
         }
+        
     } catch (error) {
         console.error('Display control error:', error);
         alert('Failed to control display: ' + error.message);
+    } finally {
+        // Re-enable button
+        const toggleButton = document.getElementById('display-toggle');
+        if (toggleButton) {
+            toggleButton.disabled = false;
+        }
     }
 }
 

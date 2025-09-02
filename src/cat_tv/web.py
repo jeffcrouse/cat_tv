@@ -44,6 +44,9 @@ def get_status_data():
     # Use scheduler's player if available, fallback to local player
     active_player = _scheduler.player if _scheduler else player
     
+    # Use scheduler's display if available, fallback to local display
+    active_display = _scheduler.display if _scheduler else display
+    
     # Check which schedule is currently active
     current_schedule = get_current_active_schedule()
     
@@ -56,7 +59,7 @@ def get_status_data():
             'is_play_time': _scheduler.is_play_time if _scheduler else False,
             'current_schedule': current_schedule
         },
-        'display': display.get_status(),
+        'display': active_display.get_status(),
         'time': datetime.now().isoformat()
     }
 
@@ -281,7 +284,10 @@ def stop_video():
 @app.route('/api/display/on', methods=['POST'])
 def display_on():
     """Turn display on."""
-    if display.turn_on():
+    # Use scheduler's display if available, fallback to local display
+    active_display = _scheduler.display if _scheduler else display
+    
+    if active_display.turn_on():
         return jsonify({'message': 'Display turned on'})
     else:
         return jsonify({'error': 'Failed to turn display on'}), 500
@@ -289,7 +295,10 @@ def display_on():
 @app.route('/api/display/off', methods=['POST'])
 def display_off():
     """Turn display off."""
-    if display.turn_off():
+    # Use scheduler's display if available, fallback to local display
+    active_display = _scheduler.display if _scheduler else display
+    
+    if active_display.turn_off():
         return jsonify({'message': 'Display turned off'})
     else:
         return jsonify({'error': 'Failed to turn display off'}), 500
@@ -297,7 +306,9 @@ def display_off():
 @app.route('/api/display/status')
 def display_status():
     """Get display status."""
-    return jsonify(display.get_status())
+    # Use scheduler's display if available, fallback to local display
+    active_display = _scheduler.display if _scheduler else display
+    return jsonify(active_display.get_status())
 
 # Playback History
 @app.route('/api/history')

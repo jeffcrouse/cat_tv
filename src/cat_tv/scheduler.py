@@ -10,6 +10,7 @@ from typing import Optional, List
 from .models import get_session, Schedule, PlaybackLog
 from .player import VideoPlayer
 from .youtube import YouTubeManager
+from .display import DisplayController
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class CatTVScheduler:
     def __init__(self):
         self.player = VideoPlayer()
         self.youtube = YouTubeManager()
+        self.display = DisplayController()
         self.is_play_time = False
         self.current_channel_index = 0
         
@@ -96,6 +98,13 @@ class CatTVScheduler:
         logger.info(f"Starting Cat TV playback for: {schedule_name}")
         
         if not self.is_play_time:
+            # Turn on display first
+            logger.info("🟢 Turning on display for scheduled playback...")
+            if self.display.turn_on():
+                logger.info("✅ Display turned on for playback")
+            else:
+                logger.warning("⚠️ Could not turn on display, continuing anyway")
+            
             self.is_play_time = True
             self.play_cat_tv_video()
     
@@ -106,6 +115,14 @@ class CatTVScheduler:
         if self.is_play_time:
             self.is_play_time = False
             self.player.stop()
+            
+            # Turn off display when stopping scheduled playback
+            if "scheduled" in reason.lower() or "outside" in reason.lower():
+                logger.info("🔴 Turning off display - outside scheduled hours...")
+                if self.display.turn_off():
+                    logger.info("✅ Display turned off")
+                else:
+                    logger.warning("⚠️ Could not turn off display")
     
     def play_cat_tv_video(self):
         """Search and play long Cat TV videos."""
