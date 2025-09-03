@@ -24,6 +24,54 @@ class CatTVScheduler:
         self.is_play_time = False
         self.current_channel_index = 0
         
+        # Immediately check if we should turn off display on startup
+        self._initial_display_check()
+    
+    def _initial_display_check(self):
+        """Initial check on startup to turn off display if outside scheduled hours."""
+        logger.info("Performing initial display check on startup...")
+        
+        now = datetime.now()
+        current_time = now.time()
+        current_day = now.weekday()
+        
+        # Check if we're in any active schedule
+        is_in_schedule = False
+        
+        try:
+            with get_session() as session:
+                schedules = session.query(Schedule).filter_by(is_active=True).all()
+                
+                for sched in schedules:
+                    if sched.is_active_on_day(current_day):
+                        # Handle schedules that cross midnight
+                        if sched.start_time <= sched.end_time:
+                            # Normal schedule
+                            if sched.start_time <= current_time < sched.end_time:
+                                logger.info(f"Startup: Currently in schedule '{sched.name}' - display should be ON")
+                                is_in_schedule = True
+                                break
+                        else:
+                            # Schedule crosses midnight
+                            if current_time >= sched.start_time or current_time < sched.end_time:
+                                logger.info(f"Startup: Currently in schedule '{sched.name}' - display should be ON")
+                                is_in_schedule = True
+                                break
+        except Exception as e:
+            logger.error(f"Error checking initial schedule: {e}")
+            # On error, assume we should turn off display
+            is_in_schedule = False
+        
+        # Turn off display if not in any schedule
+        if not is_in_schedule:
+            logger.info("🔴 Startup: Outside all scheduled hours - turning display OFF")
+            if self.display.turn_off():
+                logger.info("✅ Display turned off on startup")
+            else:
+                logger.warning("⚠️ Could not turn off display on startup")
+        else:
+            logger.info("🟢 Startup: Within scheduled hours - leaving display as-is")
+        
     def setup_schedule(self):
         """Setup scheduled Cat TV playback from database."""
         # Clear existing schedule
