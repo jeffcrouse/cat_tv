@@ -209,8 +209,14 @@ class VideoPlayer:
         # Let VLC auto-detect the best video output for the system
         # Remove specific video output to let VLC choose
         
-        # Keep audio as dummy for now to avoid ALSA issues
-        cmd.extend(["--aout", "dummy"])
+        # Add audio configuration now that we have display access
+        if config.AUDIO_OUTPUT == "hdmi":
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
+        elif config.AUDIO_OUTPUT == "local": 
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "default"])
+        else:
+            # Default to ALSA with automatic device selection
+            cmd.extend(["--aout", "alsa"])
             
         cmd.append(url)
         return cmd
