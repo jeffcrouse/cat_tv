@@ -69,7 +69,7 @@ YOUTUBE_API_KEY=
 
 # Flask settings
 FLASK_HOST=0.0.0.0
-FLASK_PORT=5000
+FLASK_PORT=8080
 SECRET_KEY=$(openssl rand -hex 32)
 
 # Player settings
@@ -89,15 +89,30 @@ mkdir -p data logs
 echo "Initializing database..."
 uv run python -c "from src.cat_tv.models import init_db; init_db()"
 
-# Install systemd service
-echo "Installing systemd service..."
-sudo cp systemd/cat-tv.service /etc/systemd/system/
+# Create systemd service dynamically
+echo "Creating systemd service..."
+sudo tee /etc/systemd/system/cat-tv.service > /dev/null << EOF
+[Unit]
+Description=Cat TV - YouTube Entertainment System for Cats
+After=network-online.target
+Wants=network-online.target
 
-# Update service file with correct user and paths
-sudo sed -i "s/User=pi/User=$USER/g" /etc/systemd/system/cat-tv.service
-sudo sed -i "s/Group=pi/Group=$USER/g" /etc/systemd/system/cat-tv.service
-sudo sed -i "s|WorkingDirectory=/home/pi/cat_tv|WorkingDirectory=$SCRIPT_DIR|g" /etc/systemd/system/cat-tv.service
-sudo sed -i "s|/home/pi/.local/bin/uv|$UV_PATH|g" /etc/systemd/system/cat-tv.service
+[Service]
+Type=simple
+User=$USER
+Group=$USER
+WorkingDirectory=$SCRIPT_DIR
+Environment="PATH=/usr/bin:/usr/local/bin"
+Environment="HOME=$HOME"
+ExecStart=$UV_PATH run cat-tv
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Reload systemd and enable service
 sudo systemctl daemon-reload
@@ -118,7 +133,7 @@ echo "Project installed in: $SCRIPT_DIR"
 echo "Running as user: $USER"
 echo ""
 echo "Web interface will be available at:"
-echo "  http://$(hostname -I | cut -d' ' -f1):5000"
+echo "  http://$(hostname -I | cut -d' ' -f1):8080"
 echo ""
 echo "To view logs:"
 echo "  journalctl -u cat-tv -f"
