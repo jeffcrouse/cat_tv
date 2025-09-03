@@ -25,7 +25,8 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Initialize components
 player = VideoPlayer()  # This will be replaced by scheduler's player
 youtube = YouTubeManager()
-display = DisplayController()
+# Don't initialize display here - will use scheduler's display
+display = None
 
 # Global reference to scheduler (set by app.py)
 _scheduler = None
@@ -33,9 +34,11 @@ _status_broadcast_thread = None
 _status_broadcast_running = False
 
 def set_scheduler(scheduler):
-    """Set the scheduler reference so we can access its player."""
-    global _scheduler
+    """Set the scheduler reference so we can access its player and display."""
+    global _scheduler, display
     _scheduler = scheduler
+    # Use scheduler's display controller
+    display = scheduler.display if scheduler else None
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +47,8 @@ def get_status_data():
     # Use scheduler's player if available, fallback to local player
     active_player = _scheduler.player if _scheduler else player
     
-    # Use scheduler's display if available, fallback to local display
-    active_display = _scheduler.display if _scheduler else display
+    # Use scheduler's display
+    active_display = _scheduler.display if _scheduler else None
     
     # Check which schedule is currently active
     current_schedule = get_current_active_schedule()
@@ -59,7 +62,7 @@ def get_status_data():
             'is_play_time': _scheduler.is_play_time if _scheduler else False,
             'current_schedule': current_schedule
         },
-        'display': active_display.get_status(),
+        'display': active_display.get_status() if active_display else {'error': 'Not initialized'},
         'time': datetime.now().isoformat()
     }
 
@@ -284,8 +287,10 @@ def stop_video():
 @app.route('/api/display/on', methods=['POST'])
 def display_on():
     """Turn display on."""
-    # Use scheduler's display if available, fallback to local display
-    active_display = _scheduler.display if _scheduler else display
+    # Use scheduler's display
+    active_display = _scheduler.display if _scheduler else None
+    if not active_display:
+        return jsonify({'error': 'Display controller not initialized'}), 500
     
     if active_display.turn_on():
         return jsonify({'message': 'Display turned on'})
@@ -295,8 +300,10 @@ def display_on():
 @app.route('/api/display/off', methods=['POST'])
 def display_off():
     """Turn display off."""
-    # Use scheduler's display if available, fallback to local display
-    active_display = _scheduler.display if _scheduler else display
+    # Use scheduler's display
+    active_display = _scheduler.display if _scheduler else None
+    if not active_display:
+        return jsonify({'error': 'Display controller not initialized'}), 500
     
     if active_display.turn_off():
         return jsonify({'message': 'Display turned off'})
@@ -306,8 +313,10 @@ def display_off():
 @app.route('/api/display/status')
 def display_status():
     """Get display status."""
-    # Use scheduler's display if available, fallback to local display
-    active_display = _scheduler.display if _scheduler else display
+    # Use scheduler's display
+    active_display = _scheduler.display if _scheduler else None
+    if not active_display:
+        return jsonify({'error': 'Display controller not initialized'}), 500
     return jsonify(active_display.get_status())
 
 # Playback History

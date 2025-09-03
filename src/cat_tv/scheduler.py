@@ -18,17 +18,24 @@ class CatTVScheduler:
     """Manages the scheduling and playback of cat entertainment videos."""
     
     def __init__(self):
-        self.player = VideoPlayer()
-        self.youtube = YouTubeManager()
+        # Initialize display controller first
         self.display = DisplayController()
+        
+        # Delay player initialization to avoid waking display
+        self.player = None
+        self.youtube = YouTubeManager()
         self.is_play_time = False
         self.current_channel_index = 0
+        self._should_start_playing = False  # Flag to start playing immediately after setup
         
         # Immediately check if we should turn off display on startup
         self._initial_display_check()
+        
+        # Initialize player after display check
+        self.player = VideoPlayer()
     
     def _initial_display_check(self):
-        """Initial check on startup to turn off display if outside scheduled hours."""
+        """Initial check on startup to turn off display if outside scheduled hours or start playback if within."""
         logger.info("Performing initial display check on startup...")
         
         now = datetime.now()
@@ -37,6 +44,7 @@ class CatTVScheduler:
         
         # Check if we're in any active schedule
         is_in_schedule = False
+        current_schedule_name = None
         
         try:
             with get_session() as session:
@@ -50,27 +58,46 @@ class CatTVScheduler:
                             if sched.start_time <= current_time < sched.end_time:
                                 logger.info(f"Startup: Currently in schedule '{sched.name}' - display should be ON")
                                 is_in_schedule = True
+                                current_schedule_name = sched.name
                                 break
                         else:
                             # Schedule crosses midnight
                             if current_time >= sched.start_time or current_time < sched.end_time:
                                 logger.info(f"Startup: Currently in schedule '{sched.name}' - display should be ON")
                                 is_in_schedule = True
+                                current_schedule_name = sched.name
                                 break
         except Exception as e:
             logger.error(f"Error checking initial schedule: {e}")
             # On error, assume we should turn off display
             is_in_schedule = False
         
-        # Turn off display if not in any schedule
+        # Turn off display if not in any schedule, or start playing if in schedule
         if not is_in_schedule:
             logger.info("🔴 Startup: Outside all scheduled hours - turning display OFF")
             if self.display.turn_off():
                 logger.info("✅ Display turned off on startup")
+                # Add a small delay to ensure display stays off
+                time.sleep(2)
+                # Turn off again in case something turned it back on
+                self.display.turn_off()
             else:
                 logger.warning("⚠️ Could not turn off display on startup")
         else:
-            logger.info("🟢 Startup: Within scheduled hours - leaving display as-is")
+            logger.info(f"🟢 Startup: Within scheduled hours ({current_schedule_name}) - starting playback immediately")
+            # Set flag and start playback immediately
+            self.is_play_time = True
+            
+            # Turn on display
+            if self.display.turn_on():
+                logger.info("✅ Display turned on for scheduled playback")
+            else:
+                logger.warning("⚠️ Could not turn on display, continuing anyway")
+            
+            # Start playing video immediately (in background thread after player is initialized)
+            # Note: We can't play video here because player isn't initialized yet
+            # We'll set a flag to start playing as soon as setup_schedule is called
+            self._should_start_playing = True
         
     def setup_schedule(self):
         """Setup scheduled Cat TV playback from database."""
@@ -93,8 +120,14 @@ class CatTVScheduler:
                 schedule.every().day.at(end_time).do(self.stop_playback, f"{sched.name} ended")
                 logger.info(f"Scheduled stop at {end_time} for {sched.name}")
         
-        # Check if we should be playing right now
-        self.check_current_time()
+        # Check if we should start playing immediately (set by _initial_display_check)
+        if self._should_start_playing:
+            logger.info("🎬 Starting playback immediately as we're within scheduled hours")
+            self.play_cat_tv_video()
+            self._should_start_playing = False  # Reset flag
+        else:
+            # Otherwise do the normal check
+            self.check_current_time()
         
         # Schedule video rotation every hour to prevent burn-in
         schedule.every().hour.do(self.rotate_video)
