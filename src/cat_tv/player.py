@@ -145,16 +145,29 @@ class VideoPlayer:
             time.sleep(0.5)
             if self.current_process.poll() is not None:
                 # Process exited immediately - try to capture any error output
+                logger.error(f"❌ VLC process exited immediately with code: {self.current_process.returncode}")
+                logger.error(f"Command was: {' '.join(cmd)}")
                 try:
                     # Use communicate to get any remaining output
                     stdout_output, stderr_output = self.current_process.communicate(timeout=1)
-                    logger.error(f"Player process exited immediately with code: {self.current_process.returncode}")
                     if stderr_output and stderr_output.strip():
                         logger.error(f"VLC stderr: {stderr_output.strip()}")
+                        # Log each line separately for better visibility
+                        for line in stderr_output.strip().split('\n'):
+                            if line.strip():
+                                logger.error(f"  stderr: {line.strip()}")
                     if stdout_output and stdout_output.strip():
                         logger.error(f"VLC stdout: {stdout_output.strip()}")
+                        for line in stdout_output.strip().split('\n'):
+                            if line.strip():
+                                logger.error(f"  stdout: {line.strip()}")
                     if not stderr_output and not stdout_output:
-                        logger.error("No output from VLC process")
+                        logger.error("❌ No output from VLC process - this suggests VLC failed before it could output anything")
+                        logger.error("This usually means:")
+                        logger.error("  - VLC binary not found")
+                        logger.error("  - Permissions issue")
+                        logger.error("  - Invalid command line arguments")
+                        logger.error("  - Audio/video system not accessible")
                 except subprocess.TimeoutExpired:
                     logger.error("Timeout waiting for VLC output")
                 except Exception as e:
