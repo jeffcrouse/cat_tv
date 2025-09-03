@@ -34,7 +34,12 @@ class CatTVScheduler:
         # Initialize player after display check
         self.player = VideoPlayer()
         # Test VLC on startup
-        self.player.test_vlc()
+        logger.info("Running VLC startup test...")
+        vlc_test_passed = self.player.test_vlc()
+        if vlc_test_passed:
+            logger.info("✅ VLC startup test passed")
+        else:
+            logger.error("❌ VLC startup test failed")
     
     def _initial_display_check(self):
         """Initial check on startup to turn off display if outside scheduled hours or start playback if within."""

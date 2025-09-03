@@ -25,7 +25,14 @@ class VideoPlayer:
     def test_vlc(self) -> bool:
         """Test if VLC is working with a simple test."""
         try:
+            # Log environment for debugging service vs interactive differences
+            import os
             logger.info("Testing VLC installation...")
+            logger.info(f"USER: {os.getenv('USER', 'not-set')}")
+            logger.info(f"HOME: {os.getenv('HOME', 'not-set')}")
+            logger.info(f"XDG_RUNTIME_DIR: {os.getenv('XDG_RUNTIME_DIR', 'not-set')}")
+            logger.info(f"PATH: {os.getenv('PATH', 'not-set')[:100]}...")
+            
             # Try to run VLC with just version flag
             test_cmd = ["cvlc", "--version"]
             result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
@@ -55,6 +62,27 @@ class VideoPlayer:
         except Exception as e:
             logger.error(f"VLC test error: {e}")
             return False
+    
+    def _test_vlc_with_url(self, test_url: str) -> bool:
+        """Test VLC with a specific URL."""
+        try:
+            cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--run-time=2", test_url]
+            logger.info(f"Testing VLC with command: {' '.join(cmd[:-1])} [test-url]")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                logger.info("VLC test URL playback successful")
+                return True
+            else:
+                logger.error(f"VLC test URL failed with code: {result.returncode}")
+                if result.stderr:
+                    logger.error(f"VLC test stderr: {result.stderr}")
+                if result.stdout:
+                    logger.error(f"VLC test stdout: {result.stdout}")
+                return False
+        except Exception as e:
+            logger.error(f"VLC URL test error: {e}")
+            return False
         
     def play(self, url: str, title: str = "Video") -> bool:
         """Play a video URL."""
@@ -63,6 +91,13 @@ class VideoPlayer:
             
             logger.info(f"Playing: {title}")
             self.current_video = {"url": url, "title": title}
+            
+            # Test with a simple URL first to debug VLC
+            if "googlevideo.com" in url or "youtube" in url.lower():
+                logger.info("Testing VLC with a simple test URL first...")
+                test_result = self._test_vlc_with_url("https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4")
+                if not test_result:
+                    logger.warning("VLC failed with test URL - may be a VLC configuration issue")
             
             if self.backend == "vlc":
                 cmd = self._get_vlc_command(url)
@@ -155,17 +190,24 @@ class VideoPlayer:
         # Start with minimal command
         cmd = ["cvlc"]  # Console VLC (no GUI)
         
-        # Add basic options that should work universally
+        # Add options for service environment
         cmd.extend([
             "--intf", "dummy",  # No interface
             "--fullscreen",
         ])
         
-        # Temporarily remove audio configuration to test if it's causing issues
-        # if config.AUDIO_OUTPUT == "hdmi":
-        #     cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
-        # elif config.AUDIO_OUTPUT == "local":
-        #     cmd.extend(["--aout", "alsa"])
+        # Add Raspberry Pi specific video output for service
+        if config.IS_RASPBERRY_PI:
+            cmd.extend([
+                "--vout", "kms",  # Use KMS video output for Pi
+                "--kms-drm-device", "/dev/dri/card0",
+            ])
+        
+        # Add audio configuration
+        if config.AUDIO_OUTPUT == "hdmi":
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
+        elif config.AUDIO_OUTPUT == "local": 
+            cmd.extend(["--aout", "alsa"])
             
         cmd.append(url)
         return cmd

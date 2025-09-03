@@ -89,26 +89,53 @@ mkdir -p data logs
 echo "Initializing database..."
 uv run python -c "from src.cat_tv.models import init_db; init_db()"
 
-# Create systemd service dynamically
+# Add user to required groups for hardware access
+echo "Adding user to video, audio, and render groups..."
+sudo usermod -a -G video,audio,render $USER
+
+# Create systemd service with hardware access permissions
 echo "Creating systemd service..."
 sudo tee /etc/systemd/system/cat-tv.service > /dev/null << EOF
 [Unit]
 Description=Cat TV - YouTube Entertainment System for Cats
-After=network-online.target
-Wants=network-online.target
+After=network.target graphical-session.target
+Wants=network.target
 
 [Service]
 Type=simple
 User=$USER
 Group=$USER
 WorkingDirectory=$SCRIPT_DIR
-Environment="PATH=/usr/bin:/usr/local/bin"
-Environment="HOME=$HOME"
 ExecStart=$UV_PATH run cat-tv
 Restart=always
 RestartSec=10
+
+# Environment variables needed for audio/video access
+Environment=HOME=$HOME
+Environment=USER=$USER
+Environment=XDG_RUNTIME_DIR=/run/user/$(id -u $USER)
+Environment=PULSE_RUNTIME_PATH=/run/user/$(id -u $USER)/pulse
+
+# Add user to video/audio groups for hardware access
+SupplementaryGroups=video audio render
+
+# Allow access to device files
+DeviceAllow=/dev/dri rw
+DeviceAllow=/dev/snd rw
+DeviceAllow=/dev/fb0 rw
+
+# Standard output/error logging
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=cat-tv
+
+# Security settings (less restrictive for hardware access)
+NoNewPrivileges=true
+ProtectKernelTunables=false
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
 
 [Install]
 WantedBy=multi-user.target
@@ -122,6 +149,8 @@ echo ""
 echo "Installation complete!"
 echo "====================="
 echo ""
+echo "IMPORTANT: You may need to log out and back in for group changes to take effect!"
+echo ""
 echo "To configure Raspberry Pi to boot to CLI mode:"
 echo "  sudo raspi-config"
 echo "  Select: 1 System Options > S5 Boot / Auto Login > B2 Console Autologin"
@@ -131,6 +160,7 @@ echo "  sudo systemctl start cat-tv"
 echo ""
 echo "Project installed in: $SCRIPT_DIR"
 echo "Running as user: $USER"
+echo "User groups: $(groups $USER)"
 echo ""
 echo "Web interface will be available at:"
 echo "  http://$(hostname -I | cut -d' ' -f1):8080"
