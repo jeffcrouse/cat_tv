@@ -209,8 +209,7 @@ class VideoPlayer:
         # Add video output for Raspberry Pi
         if config.IS_RASPBERRY_PI:
             cmd.extend([
-                "--vout", "fb",  # Framebuffer output
-                "--fbdev", "/dev/fb0",
+                "--vout", "drm",  # DRM video output
             ])
         
         # Keep audio as dummy for now to avoid ALSA issues
