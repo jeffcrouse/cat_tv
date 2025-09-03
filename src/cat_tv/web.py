@@ -150,6 +150,7 @@ def get_current_active_schedule():
                         # Normal schedule (e.g., 14:00 - 16:00)
                         if sched.start_time <= current_time < sched.end_time:
                             return {
+                                'id': sched.id,
                                 'name': sched.name,
                                 'start_time': sched.start_time.strftime('%I:%M %p'),
                                 'end_time': sched.end_time.strftime('%I:%M %p')
@@ -158,6 +159,7 @@ def get_current_active_schedule():
                         # Schedule crosses midnight (e.g., 22:00 - 02:00)
                         if current_time >= sched.start_time or current_time < sched.end_time:
                             return {
+                                'id': sched.id,
                                 'name': sched.name,
                                 'start_time': sched.start_time.strftime('%I:%M %p'),
                                 'end_time': sched.end_time.strftime('%I:%M %p')
