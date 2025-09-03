@@ -105,7 +105,7 @@ class VideoPlayer:
             sink_name = None
             
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
                 env["PULSE_SINK"] = sink_name
                 logger.info("Setting PULSE_SINK to HDMI audio")
             elif config.AUDIO_OUTPUT == "local":
@@ -122,11 +122,11 @@ class VideoPlayer:
                         env["PULSE_SINK"] = sink_name
                         logger.info("Setting PULSE_SINK to combined audio")
                     else:
-                        sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                        sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
                         env["PULSE_SINK"] = sink_name
                         logger.info("Combined sink not found, falling back to HDMI")
                 except Exception as e:
-                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
                     env["PULSE_SINK"] = sink_name
                     logger.info("Error checking sinks, falling back to HDMI")
             
@@ -252,7 +252,7 @@ class VideoPlayer:
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
                 # Check if sink exists, otherwise try to find any HDMI sink
                 if sink_name not in available_sinks:
                     for line in available_sinks.split('\n'):
@@ -310,7 +310,7 @@ class VideoPlayer:
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
                 # Check if sink exists, otherwise try to find any HDMI sink
                 if sink_name not in available_sinks:
                     for line in available_sinks.split('\n'):
