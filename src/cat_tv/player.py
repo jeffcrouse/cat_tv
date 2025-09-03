@@ -197,18 +197,24 @@ class VideoPlayer:
         # Go back to using cvlc directly since wrapper has privilege issues
         cmd = ["cvlc"]  # Console VLC (no GUI)
         
-        # Add options for service environment
+        # Add options for service environment  
         cmd.extend([
             "--intf", "dummy",  # No interface
-            "--vout", "dummy",  # No video output for now
-            "--aout", "dummy",  # No audio output for now
             "--no-video-title-show",
             "--no-osd",  # No on-screen display
             "--no-spu",  # No subtitles (which cause blending issues)
-            "--quiet",  # Reduce verbose output
+            "--fullscreen",
         ])
         
-        # Core functionality test - VLC can fetch streams but dummy output has blending issues
+        # Add video output for Raspberry Pi
+        if config.IS_RASPBERRY_PI:
+            cmd.extend([
+                "--vout", "fb",  # Framebuffer output
+                "--fbdev", "/dev/fb0",
+            ])
+        
+        # Keep audio as dummy for now to avoid ALSA issues
+        cmd.extend(["--aout", "dummy"])
             
         cmd.append(url)
         return cmd
