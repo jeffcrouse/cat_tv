@@ -28,9 +28,29 @@ sudo apt-get install -y \
     git \
     curl
 
-# Check if uv is installed (don't install it automatically)
-if ! command -v uv &> /dev/null; then
-    echo "Error: uv is not installed or not in PATH"
+# Get the actual non-root user first
+ACTUAL_USER=${SUDO_USER:-$USER}
+ACTUAL_USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+
+# Check if uv is installed (check common locations)
+UV_FOUND=0
+UV_PATH=""
+
+# Check if uv is in PATH
+if command -v uv &> /dev/null; then
+    UV_PATH=$(which uv)
+    UV_FOUND=1
+# Check common installation locations
+elif [ -x "$ACTUAL_USER_HOME/.local/bin/uv" ]; then
+    UV_PATH="$ACTUAL_USER_HOME/.local/bin/uv"
+    UV_FOUND=1
+elif [ -x "/usr/local/bin/uv" ]; then
+    UV_PATH="/usr/local/bin/uv"
+    UV_FOUND=1
+fi
+
+if [ $UV_FOUND -eq 0 ]; then
+    echo "Error: uv is not installed"
     echo ""
     echo "Please install uv first:"
     echo "  Visit: https://docs.astral.sh/uv/getting-started/installation/"
@@ -40,23 +60,7 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-# Get UV path for the actual user (not root)
-if [ -n "$SUDO_USER" ]; then
-    # Running with sudo, check user's UV installation
-    UV_PATH=$(sudo -u "$ACTUAL_USER" which uv 2>/dev/null)
-    if [ -z "$UV_PATH" ]; then
-        # Try common user locations
-        if [ -x "$ACTUAL_USER_HOME/.local/bin/uv" ]; then
-            UV_PATH="$ACTUAL_USER_HOME/.local/bin/uv"
-        elif [ -x "/usr/local/bin/uv" ]; then
-            UV_PATH="/usr/local/bin/uv"
-        fi
-    fi
-else
-    UV_PATH=$(which uv)
-fi
-
-echo "Found uv at: $UV_PATH for user: $ACTUAL_USER"
+echo "Found uv at: $UV_PATH"
 
 # Validate UV path is accessible by the target user
 if [ -n "$SUDO_USER" ]; then
@@ -71,6 +75,8 @@ else
         exit 1
     fi
 fi
+
+echo "UV validated for user: $ACTUAL_USER"
 
 # Get the current directory (where the script is located)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -114,9 +120,7 @@ mkdir -p data logs
 echo "Initializing database..."
 uv run python -c "from src.cat_tv.models import init_db; init_db()"
 
-# Get the actual non-root user (in case script is run with sudo)
-ACTUAL_USER=${SUDO_USER:-$USER}
-ACTUAL_USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+# Get user ID for runtime directory
 ACTUAL_USER_ID=$(id -u "$ACTUAL_USER")
 
 echo "Installing for user: $ACTUAL_USER"
