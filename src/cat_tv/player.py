@@ -123,12 +123,6 @@ class VideoPlayer:
                     env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
                     logger.info("Error checking sinks, falling back to HDMI")
             
-            # Test with a simple URL first to debug VLC
-            if "googlevideo.com" in url or "youtube" in url.lower():
-                logger.info("Testing VLC with a simple test URL first...")
-                test_result = self._test_vlc_with_url("https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4")
-                if not test_result:
-                    logger.warning("VLC failed with test URL - may be a VLC configuration issue")
             
             if self.backend == "vlc":
                 cmd = self._get_vlc_command(url)
