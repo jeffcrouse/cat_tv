@@ -216,6 +216,9 @@ class VideoPlayer:
         elif config.AUDIO_OUTPUT == "local": 
             # Use PipeWire for headphone jack
             cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fe00b840.mailbox.stereo-fallback"])
+        elif config.AUDIO_OUTPUT == "all":
+            # Output to all available audio interfaces simultaneously
+            cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
         else:
             # Default to PulseAudio/PipeWire automatic device selection
             cmd.extend(["--aout", "pulse"])

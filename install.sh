@@ -135,6 +135,44 @@ echo "Enabling PipeWire audio system for user $ACTUAL_USER..."
 sudo -u $ACTUAL_USER systemctl --user enable pipewire
 sudo -u $ACTUAL_USER systemctl --user start pipewire
 
+# Create PipeWire configuration for multiple audio outputs
+echo "Setting up multi-output audio configuration..."
+sudo -u $ACTUAL_USER mkdir -p "$ACTUAL_USER_HOME/.config/pipewire"
+sudo -u $ACTUAL_USER tee "$ACTUAL_USER_HOME/.config/pipewire/pipewire.conf.d/99-cat-tv.conf" > /dev/null << 'EOF'
+# Cat TV multi-output audio configuration
+context.modules = [
+    {
+        name = libpipewire-module-combine-stream
+        args = {
+            combine.mode = sink
+            node.name = "cat_tv_combined"
+            node.description = "Cat TV All Audio Outputs"
+            combine.latency-compensate = false
+            combine.props = {
+                audio.position = [ FL FR ]
+            }
+            stream.props = {
+            }
+            stream.rules = [
+                {
+                    matches = [
+                        {
+                            node.name = "~alsa_output.*"
+                        }
+                    ]
+                    actions = {
+                        create-stream = {
+                            combine.audio.position = [ FL FR ]
+                            audio.position = [ FL FR ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]
+EOF
+
 # Create systemd service with simpler configuration
 echo "Creating systemd service..."
 sudo tee /etc/systemd/system/cat-tv.service > /dev/null << EOF
