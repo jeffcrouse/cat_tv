@@ -41,7 +41,7 @@ class VideoPlayer:
             logger.info(f"PATH: {os.getenv('PATH', 'not-set')[:100]}...")
             
             # Try to run VLC with just version flag
-            test_cmd = ["/usr/bin/vlc-wrapper", "--version"]
+            test_cmd = ["cvlc", "--version"]
             result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
             
             if result.returncode == 0:
@@ -49,7 +49,7 @@ class VideoPlayer:
                 
                 # Test basic playback capability
                 logger.info("Testing VLC basic playback command...")
-                basic_test_cmd = ["/usr/bin/vlc-wrapper", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
+                basic_test_cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
                 basic_result = subprocess.run(basic_test_cmd, capture_output=True, text=True, timeout=3)
                 
                 if basic_result.returncode == 0:
@@ -73,7 +73,7 @@ class VideoPlayer:
     def _test_vlc_with_url(self, test_url: str) -> bool:
         """Test VLC with a specific URL."""
         try:
-            cmd = ["/usr/bin/vlc-wrapper", "--intf", "dummy", "--play-and-exit", "--run-time=2", test_url]
+            cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--run-time=2", test_url]
             logger.info(f"Testing VLC with command: {' '.join(cmd[:-1])} [test-url]")
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             
@@ -194,8 +194,8 @@ class VideoPlayer:
     
     def _get_vlc_command(self, url: str) -> list:
         """Get VLC command for CLI playback."""
-        # Use vlc-wrapper for service environments to avoid root issues
-        cmd = ["/usr/bin/vlc-wrapper"]  # Use wrapper instead of cvlc
+        # Go back to using cvlc directly since wrapper has privilege issues
+        cmd = ["cvlc"]  # Console VLC (no GUI)
         
         # Add options for service environment
         cmd.extend([

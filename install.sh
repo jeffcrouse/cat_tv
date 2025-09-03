@@ -93,12 +93,12 @@ uv run python -c "from src.cat_tv.models import init_db; init_db()"
 echo "Adding user to video, audio, and render groups..."
 sudo usermod -a -G video,audio,render $USER
 
-# Create systemd service with hardware access permissions
+# Create systemd service with simpler configuration
 echo "Creating systemd service..."
 sudo tee /etc/systemd/system/cat-tv.service > /dev/null << EOF
 [Unit]
 Description=Cat TV - YouTube Entertainment System for Cats
-After=network.target graphical-session.target
+After=network.target
 Wants=network.target
 
 [Service]
@@ -110,32 +110,15 @@ ExecStart=$UV_PATH run cat-tv
 Restart=always
 RestartSec=10
 
-# Environment variables needed for audio/video access
+# Environment variables
 Environment=HOME=$HOME
 Environment=USER=$USER
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u $USER)
-Environment=PULSE_RUNTIME_PATH=/run/user/$(id -u $USER)/pulse
-
-# Add user to video/audio groups for hardware access
-SupplementaryGroups=video audio render
-
-# Allow access to device files
-DeviceAllow=/dev/dri rw
-DeviceAllow=/dev/snd rw
-DeviceAllow=/dev/fb0 rw
 
 # Standard output/error logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=cat-tv
-
-# Security settings (less restrictive for hardware access)
-NoNewPrivileges=true
-ProtectKernelTunables=false
-ProtectKernelModules=true
-ProtectControlGroups=true
-RestrictRealtime=true
-RestrictNamespaces=true
 
 [Install]
 WantedBy=multi-user.target
