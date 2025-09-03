@@ -209,16 +209,16 @@ class VideoPlayer:
         # Let VLC auto-detect the best video output for the system
         # Remove specific video output to let VLC choose
         
-        # Add audio configuration now that we have display access
+        # Add audio configuration using PipeWire/PulseAudio
         if config.AUDIO_OUTPUT == "hdmi":
-            # Use HDMI audio (card 1 is primary HDMI)
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hw:1,0"])
+            # Use PipeWire for HDMI audio
+            cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
         elif config.AUDIO_OUTPUT == "local": 
-            # Use headphone jack (card 0)
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hw:0,0"])
+            # Use PipeWire for headphone jack
+            cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fe00b840.mailbox.stereo-fallback"])
         else:
-            # Default to ALSA with automatic device selection
-            cmd.extend(["--aout", "alsa"])
+            # Default to PulseAudio/PipeWire automatic device selection
+            cmd.extend(["--aout", "pulse"])
             
         cmd.append(url)
         return cmd

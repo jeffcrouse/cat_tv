@@ -130,6 +130,11 @@ echo "User home directory: $ACTUAL_USER_HOME"
 echo "Adding user to video, audio, and render groups..."
 sudo usermod -a -G video,audio,render $ACTUAL_USER
 
+# Enable PipeWire for the user (modern audio system)
+echo "Enabling PipeWire audio system for user $ACTUAL_USER..."
+sudo -u $ACTUAL_USER systemctl --user enable pipewire
+sudo -u $ACTUAL_USER systemctl --user start pipewire
+
 # Create systemd service with simpler configuration
 echo "Creating systemd service..."
 sudo tee /etc/systemd/system/cat-tv.service > /dev/null << EOF
