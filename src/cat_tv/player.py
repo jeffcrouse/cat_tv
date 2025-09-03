@@ -244,20 +244,47 @@ class VideoPlayer:
     def set_volume(self, volume: int) -> bool:
         """Set volume for the current audio sink."""
         try:
+            # First, get list of available sinks
+            result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                  capture_output=True, text=True, timeout=5)
+            available_sinks = result.stdout if result.returncode == 0 else ""
+            
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
                 sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                # Check if sink exists, otherwise try to find any HDMI sink
+                if sink_name not in available_sinks:
+                    for line in available_sinks.split('\n'):
+                        if 'hdmi' in line.lower():
+                            sink_name = line.split()[1] if line else None
+                            break
             elif config.AUDIO_OUTPUT == "local":
                 sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                # Check if sink exists
+                if sink_name not in available_sinks:
+                    for line in available_sinks.split('\n'):
+                        if 'fallback' in line.lower() or 'analog' in line.lower():
+                            sink_name = line.split()[1] if line else None
+                            break
             elif config.AUDIO_OUTPUT == "all":
-                # Check if combined sink exists
-                result = subprocess.run(["pactl", "list", "sinks", "short"], 
-                                      capture_output=True, text=True, timeout=5)
-                if "cat_tv_combined" in result.stdout:
+                if "cat_tv_combined" in available_sinks:
                     sink_name = "cat_tv_combined"
                 else:
-                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    # Try to find any available sink
+                    lines = available_sinks.split('\n')
+                    if lines and lines[0]:
+                        sink_name = lines[0].split()[1]
+            
+            # If no sink found, try to get the default sink
+            if not sink_name and available_sinks:
+                lines = available_sinks.split('\n')
+                for line in lines:
+                    if line and not line.startswith('#'):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            break
             
             if sink_name:
                 volume_percent = min(max(volume, 0), 500)  # Clamp between 0-500%
@@ -275,19 +302,47 @@ class VideoPlayer:
     def get_volume(self) -> int:
         """Get current volume of the audio sink."""
         try:
+            # First, get list of available sinks
+            result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                  capture_output=True, text=True, timeout=5)
+            available_sinks = result.stdout if result.returncode == 0 else ""
+            
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
                 sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                # Check if sink exists, otherwise try to find any HDMI sink
+                if sink_name not in available_sinks:
+                    for line in available_sinks.split('\n'):
+                        if 'hdmi' in line.lower():
+                            sink_name = line.split()[1] if line else None
+                            break
             elif config.AUDIO_OUTPUT == "local":
                 sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                # Check if sink exists
+                if sink_name not in available_sinks:
+                    for line in available_sinks.split('\n'):
+                        if 'fallback' in line.lower() or 'analog' in line.lower():
+                            sink_name = line.split()[1] if line else None
+                            break
             elif config.AUDIO_OUTPUT == "all":
-                result = subprocess.run(["pactl", "list", "sinks", "short"], 
-                                      capture_output=True, text=True, timeout=5)
-                if "cat_tv_combined" in result.stdout:
+                if "cat_tv_combined" in available_sinks:
                     sink_name = "cat_tv_combined"
                 else:
-                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    # Try to find any available sink
+                    lines = available_sinks.split('\n')
+                    if lines and lines[0]:
+                        sink_name = lines[0].split()[1]
+            
+            # If no sink found, try to get the default sink
+            if not sink_name and available_sinks:
+                lines = available_sinks.split('\n')
+                for line in lines:
+                    if line and not line.startswith('#'):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            break
             
             if sink_name:
                 result = subprocess.run(["pactl", "get-sink-volume", sink_name], 
