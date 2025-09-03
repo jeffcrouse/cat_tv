@@ -100,13 +100,17 @@ class VideoPlayer:
             logger.info(f"Playing: {title}")
             self.current_video = {"url": url, "title": title}
             
-            # Set PulseAudio sink via environment variable
+            # Set PulseAudio sink via environment variable and configure volume
             env = os.environ.copy()
+            sink_name = None
+            
             if config.AUDIO_OUTPUT == "hdmi":
-                env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                env["PULSE_SINK"] = sink_name
                 logger.info("Setting PULSE_SINK to HDMI audio")
             elif config.AUDIO_OUTPUT == "local":
-                env["PULSE_SINK"] = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                env["PULSE_SINK"] = sink_name
                 logger.info("Setting PULSE_SINK to headphone audio")
             elif config.AUDIO_OUTPUT == "all":
                 # Try combined sink first
@@ -114,14 +118,27 @@ class VideoPlayer:
                     result = subprocess.run(["pactl", "list", "sinks", "short"], 
                                           capture_output=True, text=True, timeout=5)
                     if "cat_tv_combined" in result.stdout:
-                        env["PULSE_SINK"] = "cat_tv_combined"
+                        sink_name = "cat_tv_combined"
+                        env["PULSE_SINK"] = sink_name
                         logger.info("Setting PULSE_SINK to combined audio")
                     else:
-                        env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                        sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                        env["PULSE_SINK"] = sink_name
                         logger.info("Combined sink not found, falling back to HDMI")
                 except Exception as e:
-                    env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    env["PULSE_SINK"] = sink_name
                     logger.info("Error checking sinks, falling back to HDMI")
+            
+            # Set volume using PulseAudio (convert VLC range 0-512 to PulseAudio percentage)
+            if sink_name and config.VOLUME != 100:
+                volume_percent = min(int(config.VOLUME * 100 / 100), 500)  # Cap at 500% for safety
+                try:
+                    subprocess.run(["pactl", "set-sink-volume", sink_name, f"{volume_percent}%"], 
+                                 timeout=3, check=False)
+                    logger.info(f"Set audio volume to {volume_percent}% on {sink_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to set volume: {e}")
             
             
             if self.backend == "vlc":
@@ -235,7 +252,6 @@ class VideoPlayer:
             "--no-video-title-show",
             "--quiet",  # Reduce verbose output
             "--fullscreen",  # Full screen display
-            "--volume", str(config.VOLUME),  # Set volume (range: 0-512, default 150)
         ])
         
         # Let VLC auto-detect the best video output for the system
