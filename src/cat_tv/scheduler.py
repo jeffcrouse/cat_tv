@@ -254,17 +254,25 @@ class CatTVScheduler:
                         session.add(log_entry)
                         session.commit()
                     
-                    # Try to play video
+                    # Try to play video with retries
                     logger.info(f"Attempting to play with VLC: {video['title']}")
                     play_success = self.player.play(stream_url, video['title'])
                     
                     if play_success:
                         logger.info(f"✅ VLC started successfully: {video['title']}")
                         
-                        # Wait a moment and check if still playing
-                        time.sleep(2)
-                        if self.player.is_playing():
-                            logger.info(f"✅ Confirmed playing: {video['title']}")
+                        # Give VLC more time to stabilize and check multiple times
+                        stable_count = 0
+                        for check in range(5):  # Check 5 times over 5 seconds
+                            time.sleep(1)
+                            if self.player.is_playing():
+                                stable_count += 1
+                            else:
+                                logger.warning(f"Check {check+1}: Video not playing")
+                                break
+                        
+                        if stable_count >= 3:  # If playing for at least 3 seconds
+                            logger.info(f"✅ Confirmed stable playback: {video['title']}")
                             
                             # Update log to success
                             with get_session() as session:
@@ -273,21 +281,30 @@ class CatTVScheduler:
                                 session.commit()
                             return
                         else:
-                            logger.warning(f"❌ VLC started but video stopped immediately: {video['title']}")
+                            logger.warning(f"❌ VLC started but video stopped after {stable_count} seconds: {video['title']}")
                     else:
                         logger.warning(f"❌ Failed to start VLC for: {video['title']}")
                 else:
                     logger.warning(f"❌ Could not get stream URL for: {video['title']}")
                     
-            # If first video fails, try a couple more
+            # If first video fails, try more videos from the list
             if len(long_videos) > 1:
                 logger.info("First video failed, trying backup videos...")
-                for video in long_videos[1:3]:
+                for video in long_videos[1:5]:  # Try up to 4 backup videos
                     logger.info(f"Trying backup: {video['title']}")
                     stream_url = self.youtube.get_stream_url(video['url'])
-                    if stream_url and self.player.play(stream_url, video['title']):
-                        logger.info(f"✅ Backup video started: {video['title']}")
-                        return
+                    
+                    if stream_url:
+                        if self.player.play(stream_url, video['title']):
+                            # Check stability for backup videos too
+                            time.sleep(3)
+                            if self.player.is_playing():
+                                logger.info(f"✅ Backup video playing stably: {video['title']}")
+                                return
+                            else:
+                                logger.warning(f"Backup video stopped: {video['title']}")
+                    else:
+                        logger.warning(f"Could not get stream for backup: {video['title']}")
             
         # Fallback if nothing worked
         logger.warning("No Cat TV videos worked, trying fallback...")

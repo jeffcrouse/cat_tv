@@ -71,65 +71,7 @@ function updateStatus(data) {
 }
 
 // Display control
-async function toggleDisplay() {
-    try {
-        // Get current display status
-        const statusResponse = await fetch('/api/display/status');
-        const statusData = await statusResponse.json();
-        
-        if (!statusData.available) {
-            alert('Display control not available');
-            return;
-        }
-        
-        // Determine action based on current state
-        const isCurrentlyOn = !statusData.is_blank;
-        const action = isCurrentlyOn ? 'off' : 'on';
-        
-        // Disable button during operation
-        const toggleButton = document.getElementById('display-toggle');
-        if (toggleButton) {
-            toggleButton.disabled = true;
-            toggleButton.textContent = 'Working...';
-        }
-        
-        const response = await fetch(`/api/display/${action}`, {
-            method: 'POST'
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            console.log(`Display ${action}: ${result.message}`);
-            
-            // Wait a moment for the display state to change, then refresh status
-            setTimeout(async () => {
-                try {
-                    const newStatusResponse = await fetch('/api/status');
-                    const newStatusData = await newStatusResponse.json();
-                    updateStatus(newStatusData);
-                } catch (e) {
-                    console.error('Failed to refresh status:', e);
-                }
-            }, 1000);
-            
-        } else {
-            alert(`Error: ${result.error || 'Unknown error'}`);
-        }
-        
-    } catch (error) {
-        console.error('Display control error:', error);
-        alert('Failed to control display: ' + error.message);
-    } finally {
-        // Re-enable button after a short delay
-        setTimeout(() => {
-            const toggleButton = document.getElementById('display-toggle');
-            if (toggleButton) {
-                toggleButton.disabled = false;
-            }
-        }, 1000);
-    }
-}
+// Display control removed - display is now controlled by schedule only
 
 // Schedule management
 async function loadSchedules() {

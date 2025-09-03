@@ -283,33 +283,7 @@ def stop_video():
     socketio.emit('status_update', {'playing': False})
     return jsonify({'message': 'Video stopped'})
 
-# Display Control
-@app.route('/api/display/on', methods=['POST'])
-def display_on():
-    """Turn display on."""
-    # Use scheduler's display
-    active_display = _scheduler.display if _scheduler else None
-    if not active_display:
-        return jsonify({'error': 'Display controller not initialized'}), 500
-    
-    if active_display.turn_on():
-        return jsonify({'message': 'Display turned on'})
-    else:
-        return jsonify({'error': 'Failed to turn display on'}), 500
-
-@app.route('/api/display/off', methods=['POST'])
-def display_off():
-    """Turn display off."""
-    # Use scheduler's display
-    active_display = _scheduler.display if _scheduler else None
-    if not active_display:
-        return jsonify({'error': 'Display controller not initialized'}), 500
-    
-    if active_display.turn_off():
-        return jsonify({'message': 'Display turned off'})
-    else:
-        return jsonify({'error': 'Failed to turn display off'}), 500
-
+# Display status only (no control endpoints - display is controlled by schedule only)
 @app.route('/api/display/status')
 def display_status():
     """Get display status."""

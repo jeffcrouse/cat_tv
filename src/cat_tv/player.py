@@ -4,6 +4,7 @@ import subprocess
 import logging
 import time
 import os
+import threading
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -18,6 +19,8 @@ class VideoPlayer:
         self.backend = backend or config.PLAYER_BACKEND
         self.current_process: Optional[subprocess.Popen] = None
         self.current_video: Optional[Dict[str, Any]] = None
+        self.stderr_thread: Optional[threading.Thread] = None
+        self.stdout_thread: Optional[threading.Thread] = None
         
     def play(self, url: str, title: str = "Video") -> bool:
         """Play a video URL."""
@@ -41,8 +44,31 @@ class VideoPlayer:
             self.current_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
+                bufsize=1,
+                universal_newlines=True
             )
+            
+            # Start threads to monitor output
+            self.stderr_thread = threading.Thread(
+                target=self._monitor_stderr,
+                args=(self.current_process,),
+                daemon=True
+            )
+            self.stdout_thread = threading.Thread(
+                target=self._monitor_stdout,
+                args=(self.current_process,),
+                daemon=True
+            )
+            self.stderr_thread.start()
+            self.stdout_thread.start()
+            
+            # Wait a moment to check for immediate failures
+            time.sleep(0.5)
+            if self.current_process.poll() is not None:
+                # Process exited immediately
+                logger.error(f"Player process exited immediately with code: {self.current_process.returncode}")
+                return False
             
             return True
             
@@ -85,6 +111,10 @@ class VideoPlayer:
             "--no-keyboard-events",
             "--intf", "dummy",  # No interface
             "--quiet",  # Reduce verbose output
+            "--network-caching=3000",  # Increase network cache (3 seconds)
+            "--file-caching=3000",  # Increase file cache
+            "--live-caching=3000",  # Increase live stream cache
+            "--play-and-exit",  # Exit when playback ends
         ]
         
         if config.IS_RASPBERRY_PI:
@@ -143,3 +173,27 @@ class VideoPlayer:
             
         cmd.append(url)
         return cmd
+    
+    def _monitor_stderr(self, process: subprocess.Popen):
+        """Monitor stderr output from the player process."""
+        try:
+            for line in process.stderr:
+                if line.strip():
+                    # Log VLC errors for debugging
+                    if "error" in line.lower() or "failed" in line.lower():
+                        logger.error(f"VLC Error: {line.strip()}")
+                    elif "warning" in line.lower():
+                        logger.warning(f"VLC Warning: {line.strip()}")
+                    else:
+                        logger.debug(f"VLC stderr: {line.strip()}")
+        except Exception as e:
+            logger.debug(f"Error monitoring stderr: {e}")
+    
+    def _monitor_stdout(self, process: subprocess.Popen):
+        """Monitor stdout output from the player process."""
+        try:
+            for line in process.stdout:
+                if line.strip():
+                    logger.debug(f"VLC stdout: {line.strip()}")
+        except Exception as e:
+            logger.debug(f"Error monitoring stdout: {e}")
