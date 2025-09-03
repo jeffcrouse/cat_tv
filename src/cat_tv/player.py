@@ -66,8 +66,17 @@ class VideoPlayer:
             # Wait a moment to check for immediate failures
             time.sleep(0.5)
             if self.current_process.poll() is not None:
-                # Process exited immediately
-                logger.error(f"Player process exited immediately with code: {self.current_process.returncode}")
+                # Process exited immediately - try to capture any error output
+                try:
+                    stderr_output = self.current_process.stderr.read()
+                    stdout_output = self.current_process.stdout.read()
+                    logger.error(f"Player process exited immediately with code: {self.current_process.returncode}")
+                    if stderr_output:
+                        logger.error(f"VLC stderr output: {stderr_output}")
+                    if stdout_output:
+                        logger.error(f"VLC stdout output: {stdout_output}")
+                except:
+                    pass
                 return False
             
             return True
@@ -103,33 +112,20 @@ class VideoPlayer:
     
     def _get_vlc_command(self, url: str) -> list:
         """Get VLC command for CLI playback."""
-        cmd = [
-            "cvlc",  # Console VLC (no GUI)
-            "--fullscreen",
-            "--no-video-title-show", 
-            "--no-mouse-events",
-            "--no-keyboard-events",
+        # Start with minimal command
+        cmd = ["cvlc"]  # Console VLC (no GUI)
+        
+        # Add basic options that should work universally
+        cmd.extend([
             "--intf", "dummy",  # No interface
-            "--quiet",  # Reduce verbose output
-            "--network-caching=3000",  # Increase network cache (3 seconds)
-            "--file-caching=3000",  # Increase file cache
-            "--live-caching=3000",  # Increase live stream cache
-            "--play-and-exit",  # Exit when playback ends
-        ]
+            "--fullscreen",
+        ])
         
-        if config.IS_RASPBERRY_PI:
-            # Use framebuffer output on Raspberry Pi
-            cmd.extend([
-                "--vout", "fb",
-                "--fbdev", "/dev/fb0",
-                "--no-xlib",
-            ])
-        
-        # Audio output configuration
+        # Only add audio configuration if specified
         if config.AUDIO_OUTPUT == "hdmi":
-            cmd.extend(["--alsa-audio-device", "hdmi"])
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
         elif config.AUDIO_OUTPUT == "local":
-            cmd.extend(["--alsa-audio-device", "default"])
+            cmd.extend(["--aout", "alsa"])
             
         cmd.append(url)
         return cmd
