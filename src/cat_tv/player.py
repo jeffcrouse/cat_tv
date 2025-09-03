@@ -202,10 +202,13 @@ class VideoPlayer:
             "--intf", "dummy",  # No interface
             "--vout", "dummy",  # No video output for now
             "--aout", "dummy",  # No audio output for now
+            "--no-video-title-show",
+            "--no-osd",  # No on-screen display
+            "--no-spu",  # No subtitles (which cause blending issues)
+            "--quiet",  # Reduce verbose output
         ])
         
-        # Temporarily disable all audio/video output to test core functionality
-        # This should allow VLC to fetch and process streams without hardware issues
+        # Core functionality test - VLC can fetch streams but dummy output has blending issues
             
         cmd.append(url)
         return cmd
