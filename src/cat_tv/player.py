@@ -27,14 +27,21 @@ class VideoPlayer:
         try:
             # Log environment for debugging service vs interactive differences
             import os
+            import pwd
             logger.info("Testing VLC installation...")
+            logger.info(f"Real UID: {os.getuid()}, Effective UID: {os.geteuid()}")
+            logger.info(f"Real GID: {os.getgid()}, Effective GID: {os.getegid()}")
+            try:
+                logger.info(f"Username: {pwd.getpwuid(os.getuid()).pw_name}")
+            except:
+                logger.info("Could not get username")
             logger.info(f"USER: {os.getenv('USER', 'not-set')}")
             logger.info(f"HOME: {os.getenv('HOME', 'not-set')}")
             logger.info(f"XDG_RUNTIME_DIR: {os.getenv('XDG_RUNTIME_DIR', 'not-set')}")
             logger.info(f"PATH: {os.getenv('PATH', 'not-set')[:100]}...")
             
             # Try to run VLC with just version flag
-            test_cmd = ["cvlc", "--version"]
+            test_cmd = ["/usr/bin/vlc-wrapper", "--version"]
             result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
             
             if result.returncode == 0:
@@ -42,7 +49,7 @@ class VideoPlayer:
                 
                 # Test basic playback capability
                 logger.info("Testing VLC basic playback command...")
-                basic_test_cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
+                basic_test_cmd = ["/usr/bin/vlc-wrapper", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
                 basic_result = subprocess.run(basic_test_cmd, capture_output=True, text=True, timeout=3)
                 
                 if basic_result.returncode == 0:
@@ -66,7 +73,7 @@ class VideoPlayer:
     def _test_vlc_with_url(self, test_url: str) -> bool:
         """Test VLC with a specific URL."""
         try:
-            cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--run-time=2", test_url]
+            cmd = ["/usr/bin/vlc-wrapper", "--intf", "dummy", "--play-and-exit", "--run-time=2", test_url]
             logger.info(f"Testing VLC with command: {' '.join(cmd[:-1])} [test-url]")
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             
@@ -187,8 +194,8 @@ class VideoPlayer:
     
     def _get_vlc_command(self, url: str) -> list:
         """Get VLC command for CLI playback."""
-        # Start with minimal command
-        cmd = ["cvlc"]  # Console VLC (no GUI)
+        # Use vlc-wrapper for service environments to avoid root issues
+        cmd = ["/usr/bin/vlc-wrapper"]  # Use wrapper instead of cvlc
         
         # Add options for service environment
         cmd.extend([
