@@ -32,6 +32,18 @@ class VideoPlayer:
             
             if result.returncode == 0:
                 logger.info("VLC is installed and accessible")
+                
+                # Test basic playback capability
+                logger.info("Testing VLC basic playback command...")
+                basic_test_cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
+                basic_result = subprocess.run(basic_test_cmd, capture_output=True, text=True, timeout=3)
+                
+                if basic_result.returncode == 0:
+                    logger.info("VLC basic playback test passed")
+                else:
+                    logger.warning(f"VLC basic playback test failed with code: {basic_result.returncode}")
+                    logger.warning(f"stderr: {basic_result.stderr}")
+                
                 return True
             else:
                 logger.error(f"VLC test failed with code {result.returncode}")
@@ -92,15 +104,19 @@ class VideoPlayer:
             if self.current_process.poll() is not None:
                 # Process exited immediately - try to capture any error output
                 try:
-                    stderr_output = self.current_process.stderr.read()
-                    stdout_output = self.current_process.stdout.read()
+                    # Use communicate to get any remaining output
+                    stdout_output, stderr_output = self.current_process.communicate(timeout=1)
                     logger.error(f"Player process exited immediately with code: {self.current_process.returncode}")
-                    if stderr_output:
-                        logger.error(f"VLC stderr output: {stderr_output}")
-                    if stdout_output:
-                        logger.error(f"VLC stdout output: {stdout_output}")
-                except:
-                    pass
+                    if stderr_output and stderr_output.strip():
+                        logger.error(f"VLC stderr: {stderr_output.strip()}")
+                    if stdout_output and stdout_output.strip():
+                        logger.error(f"VLC stdout: {stdout_output.strip()}")
+                    if not stderr_output and not stdout_output:
+                        logger.error("No output from VLC process")
+                except subprocess.TimeoutExpired:
+                    logger.error("Timeout waiting for VLC output")
+                except Exception as e:
+                    logger.error(f"Error capturing VLC output: {e}")
                 return False
             
             return True
@@ -145,11 +161,11 @@ class VideoPlayer:
             "--fullscreen",
         ])
         
-        # Only add audio configuration if specified
-        if config.AUDIO_OUTPUT == "hdmi":
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
-        elif config.AUDIO_OUTPUT == "local":
-            cmd.extend(["--aout", "alsa"])
+        # Temporarily remove audio configuration to test if it's causing issues
+        # if config.AUDIO_OUTPUT == "hdmi":
+        #     cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
+        # elif config.AUDIO_OUTPUT == "local":
+        #     cmd.extend(["--aout", "alsa"])
             
         cmd.append(url)
         return cmd
