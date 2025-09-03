@@ -301,10 +301,21 @@ class VideoPlayer:
                             for part in parts:
                                 if '%' in part:
                                     volume_str = part.strip().replace('%', '')
-                                    return int(volume_str)
-                
-                logger.warning("Could not parse volume from pactl output")
-                return config.VOLUME  # Return config default
+                                    try:
+                                        return int(volume_str)
+                                    except ValueError:
+                                        logger.warning(f"Could not parse volume value: {volume_str}")
+                    
+                    # Log the actual output if parsing failed (limit to first 200 chars)
+                    if result.stdout:
+                        logger.warning(f"Could not parse volume from pactl output: {result.stdout[:200]}")
+                    else:
+                        logger.warning("pactl returned empty output")
+                    return config.VOLUME  # Return config default
+                else:
+                    # Log error if pactl command failed
+                    logger.warning(f"pactl get-sink-volume failed for sink {sink_name}: {result.stderr}")
+                    return config.VOLUME
             else:
                 return config.VOLUME
         except Exception as e:
