@@ -206,11 +206,8 @@ class VideoPlayer:
             "--fullscreen",
         ])
         
-        # Add video output for Raspberry Pi
-        if config.IS_RASPBERRY_PI:
-            cmd.extend([
-                "--vout", "drm",  # DRM video output
-            ])
+        # Let VLC auto-detect the best video output for the system
+        # Remove specific video output to let VLC choose
         
         # Keep audio as dummy for now to avoid ALSA issues
         cmd.extend(["--aout", "dummy"])
