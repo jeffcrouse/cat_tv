@@ -234,6 +234,7 @@ class VideoPlayer:
             "--intf", "dummy",  # No interface
             "--no-video-title-show",
             "--quiet",  # Reduce verbose output
+            "--fullscreen",  # Full screen display
         ])
         
         # Let VLC auto-detect the best video output for the system
