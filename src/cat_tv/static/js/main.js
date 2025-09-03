@@ -473,3 +473,124 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Audio Recording Functionality
+let mediaRecorder;
+let audioChunks = [];
+let recordingStartTime;
+let recordingTimer;
+let audioBlob;
+
+function toggleRecording() {
+    const recordBtn = document.getElementById('record-btn');
+    const recordingTime = document.getElementById('recording-time');
+    const timeDisplay = document.getElementById('time-display');
+    
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        // Start recording
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Show playback controls
+                    document.getElementById('audio-preview').src = audioUrl;
+                    document.getElementById('audio-playback').style.display = 'block';
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                recordingStartTime = Date.now();
+                
+                // Update UI
+                recordBtn.classList.add('recording');
+                recordBtn.innerHTML = '<span class="record-icon">■</span> Stop Recording';
+                recordingTime.style.display = 'block';
+                
+                // Start timer
+                recordingTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                    const seconds = (elapsed % 60).toString().padStart(2, '0');
+                    timeDisplay.textContent = `${minutes}:${seconds}`;
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error accessing microphone:', error);
+                showRecordingStatus('Error: Could not access microphone. Please check permissions.', 'error');
+            });
+    } else {
+        // Stop recording
+        mediaRecorder.stop();
+        clearInterval(recordingTimer);
+        
+        // Update UI
+        recordBtn.classList.remove('recording');
+        recordBtn.innerHTML = '<span class="record-icon">●</span> Start Recording';
+        recordingTime.style.display = 'none';
+    }
+}
+
+function submitAudio() {
+    if (!audioBlob) {
+        showRecordingStatus('No audio recorded', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `message_${timestamp}.webm`;
+    formData.append('audio', audioBlob, filename);
+    
+    fetch('/api/audio/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showRecordingStatus('Audio message saved successfully!', 'success');
+            setTimeout(() => {
+                cancelRecording();
+            }, 2000);
+        } else {
+            showRecordingStatus('Error saving audio: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading audio:', error);
+        showRecordingStatus('Error uploading audio', 'error');
+    });
+}
+
+function cancelRecording() {
+    // Reset UI
+    document.getElementById('audio-playback').style.display = 'none';
+    document.getElementById('audio-preview').src = '';
+    document.getElementById('recording-status').style.display = 'none';
+    audioBlob = null;
+    audioChunks = [];
+}
+
+function showRecordingStatus(message, type) {
+    const statusDiv = document.getElementById('recording-status');
+    statusDiv.textContent = message;
+    statusDiv.className = 'recording-status ' + type;
+    statusDiv.style.display = 'block';
+    
+    if (type === 'success') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}

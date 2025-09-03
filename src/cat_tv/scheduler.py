@@ -27,6 +27,9 @@ class CatTVScheduler:
         self.is_play_time = False
         self.current_channel_index = 0
         self._should_start_playing = False  # Flag to start playing immediately after setup
+        # Track when current video started for watchdog
+        self.video_start_time = None
+        self.max_video_duration = 3600  # Max 1 hour per video, restart live streams periodically
         
         # Immediately check if we should turn off display on startup
         self._initial_display_check()
@@ -280,6 +283,7 @@ class CatTVScheduler:
                         
                         if stable_count >= 3:  # If playing for at least 3 seconds
                             logger.info(f"✅ Confirmed stable playback: {video['title']}")
+                            self.video_start_time = time.time()  # Record when video started
                             
                             # Update log to success
                             with get_session() as session:
@@ -346,11 +350,31 @@ class CatTVScheduler:
             try:
                 schedule.run_pending()
                 
-                # Check if current video has ended
-                if self.is_play_time and not self.player.is_playing():
-                    logger.info("Video ended, playing next Cat TV video")
-                    time.sleep(5)  # Brief pause between videos
-                    self.play_cat_tv_video()
+                # Check if current video has ended or needs restart
+                if self.is_play_time:
+                    playing = self.player.is_playing()
+                    
+                    # Check if video has been playing too long (for live streams that might stall)
+                    if playing and self.video_start_time:
+                        elapsed = time.time() - self.video_start_time
+                        if elapsed > self.max_video_duration:
+                            logger.info(f"Video has been playing for {elapsed/60:.1f} minutes, restarting to prevent stalls")
+                            self.player.stop()
+                            time.sleep(2)
+                            self.play_cat_tv_video()
+                    
+                    if not playing:
+                        logger.info("Video ended or player stopped, playing next Cat TV video")
+                        time.sleep(5)  # Brief pause between videos
+                        self.play_cat_tv_video()
+                    else:
+                        # Log every minute that playback is ongoing
+                        if int(time.time()) % 60 < 10:
+                            current_video = self.player.current_video or {}
+                            title = current_video.get('title', 'Unknown')
+                            if self.video_start_time:
+                                duration = (time.time() - self.video_start_time) / 60
+                                logger.debug(f"Playback check: '{title}' playing for {duration:.1f} minutes")
                 
                 time.sleep(10)  # Check every 10 seconds
                 

@@ -73,6 +73,29 @@
             </table>
         </div>
         
+        <!-- Audio Message Recorder -->
+        <div class="card">
+            <h2>🎤 Record Audio Message</h2>
+            <div class="audio-recorder">
+                <div class="recorder-controls">
+                    <button id="record-btn" class="record-button" onclick="toggleRecording()">
+                        <span class="record-icon">●</span> Start Recording
+                    </button>
+                    <div id="recording-time" class="recording-time" style="display: none;">
+                        Recording: <span id="time-display">00:00</span>
+                    </div>
+                </div>
+                <div id="audio-playback" class="audio-playback" style="display: none;">
+                    <audio id="audio-preview" controls></audio>
+                    <div class="audio-actions">
+                        <button onclick="submitAudio()" class="submit-audio">✓ Submit</button>
+                        <button onclick="cancelRecording()" class="cancel-audio">✗ Cancel</button>
+                    </div>
+                </div>
+                <div id="recording-status" class="recording-status"></div>
+            </div>
+        </div>
+        
         <!-- History Card -->
         <div class="card">
             <h2>Recent Playback History</h2>

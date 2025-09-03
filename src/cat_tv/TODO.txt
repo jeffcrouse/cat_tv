@@ -1,0 +1,1 @@
+- Make the "Recent Playback History" scrollable, and limited to the most recent 50 entries

@@ -41,11 +41,15 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE = LOG_DIR / "cat_tv.log"
     
+    # Audio Messages
+    AUDIO_MESSAGES_DIR = DATA_DIR / "audio_messages"
+    
     @classmethod
     def ensure_directories(cls):
         """Create necessary directories if they don't exist."""
         cls.DATA_DIR.mkdir(parents=True, exist_ok=True)
         cls.LOG_DIR.mkdir(parents=True, exist_ok=True)
+        cls.AUDIO_MESSAGES_DIR.mkdir(parents=True, exist_ok=True)
     
     @classmethod
     def update_env_value(cls, key: str, value: str):

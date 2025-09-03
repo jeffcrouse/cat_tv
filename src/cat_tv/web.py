@@ -352,6 +352,100 @@ def set_volume():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# Audio Message Management
+@app.route('/api/audio/upload', methods=['POST'])
+def upload_audio():
+    """Upload and save an audio message."""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'success': False, 'error': 'No audio file provided'}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Ensure audio messages directory exists
+        config.ensure_directories()
+        
+        # Generate safe filename with timestamp
+        from werkzeug.utils import secure_filename
+        import os
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        original_name = secure_filename(audio_file.filename)
+        # Keep the extension from the original filename
+        _, ext = os.path.splitext(original_name)
+        if not ext:
+            ext = '.webm'  # Default extension for web recordings
+        filename = f"message_{timestamp}{ext}"
+        
+        # Save the file
+        filepath = config.AUDIO_MESSAGES_DIR / filename
+        audio_file.save(str(filepath))
+        
+        logger.info(f"Saved audio message: {filename}")
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'path': str(filepath)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error uploading audio: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/audio/list', methods=['GET'])
+def list_audio_messages():
+    """List all saved audio messages."""
+    try:
+        import os
+        messages = []
+        
+        if config.AUDIO_MESSAGES_DIR.exists():
+            for file in sorted(config.AUDIO_MESSAGES_DIR.glob('*.webm')):
+                stat = file.stat()
+                messages.append({
+                    'filename': file.name,
+                    'size': stat.st_size,
+                    'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
+                })
+            # Also include other audio formats
+            for ext in ['.mp3', '.wav', '.m4a', '.ogg']:
+                for file in sorted(config.AUDIO_MESSAGES_DIR.glob(f'*{ext}')):
+                    stat = file.stat()
+                    messages.append({
+                        'filename': file.name,
+                        'size': stat.st_size,
+                        'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                        'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    })
+        
+        return jsonify({'messages': messages})
+        
+    except Exception as e:
+        logger.error(f"Error listing audio messages: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/audio/delete/<filename>', methods=['DELETE'])
+def delete_audio_message(filename):
+    """Delete an audio message."""
+    try:
+        from werkzeug.utils import secure_filename
+        safe_filename = secure_filename(filename)
+        filepath = config.AUDIO_MESSAGES_DIR / safe_filename
+        
+        if filepath.exists() and filepath.parent == config.AUDIO_MESSAGES_DIR:
+            filepath.unlink()
+            logger.info(f"Deleted audio message: {safe_filename}")
+            return jsonify({'success': True, 'message': 'Audio deleted'})
+        else:
+            return jsonify({'success': False, 'error': 'File not found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error deleting audio: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Display status only (no control endpoints - display is controlled by schedule only)
 @app.route('/api/display/status')
 def display_status():
