@@ -18,7 +18,9 @@ class YouTubeManager:
             'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
-            'format': 'best',
+            # Select best quality video with audio, prefer higher resolution
+            # This will get up to 1080p with audio, or best available
+            'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080]/best',
             'nocheckcertificate': True,
         }
         # Cache successful videos to avoid re-searching

@@ -104,31 +104,50 @@ class VideoPlayer:
             env = os.environ.copy()
             sink_name = None
             
+            # Get list of available sinks first
+            try:
+                result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                      capture_output=True, text=True, timeout=5)
+                available_sinks = result.stdout if result.returncode == 0 else ""
+            except Exception:
+                available_sinks = ""
+            
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
-                env["PULSE_SINK"] = sink_name
-                logger.info("Setting PULSE_SINK to HDMI audio")
+                # Dynamically find HDMI sink
+                for line in available_sinks.split('\n'):
+                    if 'hdmi' in line.lower():
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            env["PULSE_SINK"] = sink_name
+                            logger.info(f"Setting PULSE_SINK to HDMI audio: {sink_name}")
+                            break
             elif config.AUDIO_OUTPUT == "local":
-                sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
-                env["PULSE_SINK"] = sink_name
-                logger.info("Setting PULSE_SINK to headphone audio")
+                # Dynamically find local/analog sink
+                for line in available_sinks.split('\n'):
+                    if 'fallback' in line.lower() or 'analog' in line.lower():
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            env["PULSE_SINK"] = sink_name
+                            logger.info(f"Setting PULSE_SINK to local audio: {sink_name}")
+                            break
             elif config.AUDIO_OUTPUT == "all":
                 # Try combined sink first
-                try:
-                    result = subprocess.run(["pactl", "list", "sinks", "short"], 
-                                          capture_output=True, text=True, timeout=5)
-                    if "cat_tv_combined" in result.stdout:
-                        sink_name = "cat_tv_combined"
-                        env["PULSE_SINK"] = sink_name
-                        logger.info("Setting PULSE_SINK to combined audio")
-                    else:
-                        sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
-                        env["PULSE_SINK"] = sink_name
-                        logger.info("Combined sink not found, falling back to HDMI")
-                except Exception as e:
-                    sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
+                if "cat_tv_combined" in available_sinks:
+                    sink_name = "cat_tv_combined"
                     env["PULSE_SINK"] = sink_name
-                    logger.info("Error checking sinks, falling back to HDMI")
+                    logger.info("Setting PULSE_SINK to combined audio")
+                else:
+                    # Fallback to HDMI
+                    for line in available_sinks.split('\n'):
+                        if 'hdmi' in line.lower():
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                sink_name = parts[1]
+                                env["PULSE_SINK"] = sink_name
+                                logger.info(f"Combined sink not found, using HDMI: {sink_name}")
+                                break
             
             # Set volume using PulseAudio from config
             if sink_name:
@@ -252,12 +271,13 @@ class VideoPlayer:
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
-                # Check if sink exists, otherwise try to find any HDMI sink
-                if sink_name not in available_sinks:
-                    for line in available_sinks.split('\n'):
-                        if 'hdmi' in line.lower():
-                            sink_name = line.split()[1] if line else None
+                # Always dynamically find HDMI sink instead of hardcoding
+                for line in available_sinks.split('\n'):
+                    if 'hdmi' in line.lower():
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            logger.debug(f"Found HDMI sink: {sink_name}")
                             break
             elif config.AUDIO_OUTPUT == "local":
                 sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
@@ -310,12 +330,13 @@ class VideoPlayer:
             # Determine current sink
             sink_name = None
             if config.AUDIO_OUTPUT == "hdmi":
-                sink_name = "alsa_output.platform-fef05700.hdmi.hdmi-stereo"
-                # Check if sink exists, otherwise try to find any HDMI sink
-                if sink_name not in available_sinks:
-                    for line in available_sinks.split('\n'):
-                        if 'hdmi' in line.lower():
-                            sink_name = line.split()[1] if line else None
+                # Always dynamically find HDMI sink instead of hardcoding
+                for line in available_sinks.split('\n'):
+                    if 'hdmi' in line.lower():
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            sink_name = parts[1]
+                            logger.debug(f"Found HDMI sink: {sink_name}")
                             break
             elif config.AUDIO_OUTPUT == "local":
                 sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
