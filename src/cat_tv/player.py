@@ -241,6 +241,76 @@ class VideoPlayer:
             return self.current_process.poll() is None
         return False
     
+    def set_volume(self, volume: int) -> bool:
+        """Set volume for the current audio sink."""
+        try:
+            # Determine current sink
+            sink_name = None
+            if config.AUDIO_OUTPUT == "hdmi":
+                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+            elif config.AUDIO_OUTPUT == "local":
+                sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+            elif config.AUDIO_OUTPUT == "all":
+                # Check if combined sink exists
+                result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                      capture_output=True, text=True, timeout=5)
+                if "cat_tv_combined" in result.stdout:
+                    sink_name = "cat_tv_combined"
+                else:
+                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+            
+            if sink_name:
+                volume_percent = min(max(volume, 0), 500)  # Clamp between 0-500%
+                subprocess.run(["pactl", "set-sink-volume", sink_name, f"{volume_percent}%"], 
+                             timeout=3, check=True)
+                logger.info(f"Set volume to {volume_percent}% on {sink_name}")
+                return True
+            else:
+                logger.error("No audio sink available for volume control")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to set volume: {e}")
+            return False
+    
+    def get_volume(self) -> int:
+        """Get current volume of the audio sink."""
+        try:
+            # Determine current sink
+            sink_name = None
+            if config.AUDIO_OUTPUT == "hdmi":
+                sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+            elif config.AUDIO_OUTPUT == "local":
+                sink_name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+            elif config.AUDIO_OUTPUT == "all":
+                result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                      capture_output=True, text=True, timeout=5)
+                if "cat_tv_combined" in result.stdout:
+                    sink_name = "cat_tv_combined"
+                else:
+                    sink_name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+            
+            if sink_name:
+                result = subprocess.run(["pactl", "get-sink-volume", sink_name], 
+                                      capture_output=True, text=True, timeout=3)
+                if result.returncode == 0:
+                    # Parse volume from output like "Volume: front-left: 98304 /  150% / -3.52 dB"
+                    for line in result.stdout.split('\n'):
+                        if 'Volume:' in line and '%' in line:
+                            # Extract percentage
+                            parts = line.split('/')
+                            for part in parts:
+                                if '%' in part:
+                                    volume_str = part.strip().replace('%', '')
+                                    return int(volume_str)
+                
+                logger.warning("Could not parse volume from pactl output")
+                return config.VOLUME  # Return config default
+            else:
+                return config.VOLUME
+        except Exception as e:
+            logger.error(f"Failed to get volume: {e}")
+            return config.VOLUME
+    
     def _get_vlc_command(self, url: str) -> list:
         """Get VLC command for CLI playback."""
         # Go back to using cvlc directly since wrapper has privilege issues

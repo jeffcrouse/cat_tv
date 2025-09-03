@@ -56,7 +56,8 @@ def get_status_data():
     return {
         'player': {
             'is_playing': active_player.is_playing(),
-            'current_video': active_player.current_video
+            'current_video': active_player.current_video,
+            'volume': active_player.get_volume()
         },
         'scheduler': {
             'is_play_time': _scheduler.is_play_time if _scheduler else False,
@@ -282,6 +283,38 @@ def stop_video():
     active_player.stop()
     socketio.emit('status_update', {'playing': False})
     return jsonify({'message': 'Video stopped'})
+
+@app.route('/api/volume', methods=['GET'])
+def get_volume():
+    """Get current volume."""
+    active_player = _scheduler.player if _scheduler else player
+    volume = active_player.get_volume()
+    return jsonify({'volume': volume})
+
+@app.route('/api/volume', methods=['POST'])
+def set_volume():
+    """Set volume."""
+    try:
+        data = request.json
+        volume = int(data.get('volume', 100))
+        
+        # Clamp volume between 0 and 500
+        volume = min(max(volume, 0), 500)
+        
+        active_player = _scheduler.player if _scheduler else player
+        success = active_player.set_volume(volume)
+        
+        if success:
+            # Broadcast updated status
+            socketio.emit('status_update', get_status_data())
+            return jsonify({'message': 'Volume set', 'volume': volume})
+        else:
+            return jsonify({'error': 'Failed to set volume'}), 400
+            
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid volume value'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 # Display status only (no control endpoints - display is controlled by schedule only)
 @app.route('/api/display/status')

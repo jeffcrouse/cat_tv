@@ -34,6 +34,17 @@ function updateStatus(data) {
         const videoEl = document.getElementById('current-video');
         const title = data.player.current_video ? data.player.current_video.title : 'None';
         videoEl.querySelector('.value').textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
+        
+        // Update volume controls if volume data is available
+        if (data.player.volume !== undefined) {
+            const volumeSlider = document.getElementById('volume-slider');
+            const volumeDisplay = document.getElementById('volume-display');
+            
+            if (volumeSlider && volumeDisplay) {
+                volumeSlider.value = data.player.volume;
+                volumeDisplay.textContent = data.player.volume;
+            }
+        }
     }
     
     // Update display status
@@ -330,3 +341,43 @@ async function loadHistory() {
 
 // Auto-refresh
 setInterval(loadHistory, 30000);   // Refresh history every 30 seconds
+
+// Volume control functions
+function setVolume(volume) {
+    fetch('/api/volume', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ volume: volume })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('Volume error:', data.error);
+        } else {
+            console.log('Volume set to:', data.volume);
+        }
+    })
+    .catch(error => {
+        console.error('Error setting volume:', error);
+    });
+}
+
+// Volume slider handler
+document.addEventListener('DOMContentLoaded', function() {
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeDisplay = document.getElementById('volume-display');
+    
+    if (volumeSlider && volumeDisplay) {
+        // Update display when slider moves
+        volumeSlider.addEventListener('input', function() {
+            volumeDisplay.textContent = this.value;
+        });
+        
+        // Set volume when slider stops moving
+        volumeSlider.addEventListener('change', function() {
+            setVolume(parseInt(this.value));
+        });
+    }
+});

@@ -455,3 +455,99 @@ input, select {
         gap: 8px;
     }
 }
+
+/* Volume Control Styles */
+.player-controls {
+    max-width: 600px;
+}
+
+.volume-control {
+    margin-bottom: 20px;
+}
+
+.volume-control label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+}
+
+.volume-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+#volume-slider {
+    flex: 1;
+    min-width: 200px;
+    height: 8px;
+    border-radius: 4px;
+    background: #e0e0e0;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#volume-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.volume-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.volume-buttons button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s;
+}
+
+.volume-buttons button:hover {
+    background: #5a67d8;
+}
+
+.volume-buttons button:active {
+    background: #4c51bf;
+}
+
+/* Responsive adjustments for volume controls */
+@media (max-width: 768px) {
+    .volume-slider-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #volume-slider {
+        min-width: unset;
+    }
+    
+    .volume-buttons {
+        justify-content: center;
+    }
+}
