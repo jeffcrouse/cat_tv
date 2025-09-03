@@ -211,9 +211,11 @@ class VideoPlayer:
         
         # Add audio configuration now that we have display access
         if config.AUDIO_OUTPUT == "hdmi":
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
+            # Use HDMI audio (card 1 is primary HDMI)
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hw:1,0"])
         elif config.AUDIO_OUTPUT == "local": 
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "default"])
+            # Use headphone jack (card 0)
+            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hw:0,0"])
         else:
             # Default to ALSA with automatic device selection
             cmd.extend(["--aout", "alsa"])
