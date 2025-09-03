@@ -204,9 +204,6 @@ async function loadSchedules() {
                 schedule.days_of_week.split(',').includes(dayOfWeek.toString()) &&
                 isInTimeWindow;
             
-            const statusText = isCurrentlyActive ? '🟢 ACTIVE NOW' : 
-                             schedule.is_active ? '⭕ Scheduled' : '❌ Disabled';
-            
             const row = tbody.insertRow();
             row.setAttribute('data-schedule-id', schedule.id);
             row.innerHTML = `
@@ -214,17 +211,23 @@ async function loadSchedules() {
                 <td>${schedule.start_time}</td>
                 <td>${schedule.end_time}</td>
                 <td>${days}</td>
-                <td>${statusText}</td>
                 <td>
-                    <button onclick="editSchedule(${schedule.id})" style="margin-right: 5px;">Edit</button>
-                    <button onclick="deleteSchedule(${schedule.id})" class="btn-danger">Delete</button>
+                    <span class="status-badge ${schedule.is_active ? 'active' : 'inactive'}">
+                        ${schedule.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    ${isCurrentlyActive ? '<span class="current-indicator">● PLAYING</span>' : ''}
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button onclick="editSchedule(${schedule.id})" class="btn-edit">Edit</button>
+                        <button onclick="deleteSchedule(${schedule.id})" class="btn-delete">Delete</button>
+                        <button onclick="toggleSchedule(${schedule.id}, ${!schedule.is_active})" 
+                                class="${schedule.is_active ? 'btn-disable' : 'btn-enable'}">
+                            ${schedule.is_active ? 'Disable' : 'Enable'}
+                        </button>
+                    </div>
                 </td>
             `;
-            
-            // Highlight active schedule
-            if (isCurrentlyActive) {
-                row.style.backgroundColor = '#d4f4dd';
-            }
         });
     } catch (error) {
         console.error('Error loading schedules:', error);
@@ -384,6 +387,24 @@ async function deleteSchedule(id) {
     }
 }
 
+async function toggleSchedule(id, enable) {
+    try {
+        const response = await fetch(`/api/schedules/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: enable })
+        });
+        const result = await response.json();
+        if (response.ok) {
+            loadSchedules(); // Reload schedules to show updated state
+        } else {
+            alert('Error toggling schedule: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error toggling schedule: ' + error);
+    }
+}
+
 // History
 async function loadHistory() {
     try {
@@ -485,6 +506,17 @@ function toggleRecording() {
     const recordBtn = document.getElementById('record-btn');
     const recordingTime = document.getElementById('recording-time');
     const timeDisplay = document.getElementById('time-display');
+    
+    // Check if browser supports getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // Check if we're on HTTP (not HTTPS)
+        if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            showRecordingStatus('Error: Audio recording requires HTTPS. Please use https:// instead of http://', 'error');
+        } else {
+            showRecordingStatus('Error: Your browser does not support audio recording.', 'error');
+        }
+        return;
+    }
     
     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
         // Start recording

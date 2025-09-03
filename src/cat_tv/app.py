@@ -123,13 +123,34 @@ class CatTVApp:
             # Start status broadcasting
             start_status_broadcast()
             
+            # Check if SSL certificates exist for HTTPS
+            import os
+            from pathlib import Path
+            cert_file = Path(config.BASE_DIR) / 'cert.pem'
+            key_file = Path(config.BASE_DIR) / 'key.pem'
+            
             # Run web server
-            socketio.run(
-                app, 
-                host=config.FLASK_HOST, 
-                port=config.FLASK_PORT, 
-                debug=config.DEBUG,
-                use_reloader=False,  # Don't use reloader in production
+            if cert_file.exists() and key_file.exists():
+                logger.info("🔒 Starting with HTTPS support (certificates found)")
+                logger.info(f"Access the interface at https://{config.FLASK_HOST}:{config.FLASK_PORT}")
+                socketio.run(
+                    app, 
+                    host=config.FLASK_HOST, 
+                    port=config.FLASK_PORT, 
+                    debug=config.DEBUG,
+                    use_reloader=False,  # Don't use reloader in production
+                    ssl_context=(str(cert_file), str(key_file))
+                )
+            else:
+                logger.info("Starting with HTTP only (no certificates found)")
+                logger.info("⚠️ Audio recording requires HTTPS. To enable it, generate certificates:")
+                logger.info("  cd ~/cat_tv && openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365")
+                socketio.run(
+                    app, 
+                    host=config.FLASK_HOST, 
+                    port=config.FLASK_PORT, 
+                    debug=config.DEBUG,
+                    use_reloader=False,  # Don't use reloader in production
                 allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
             )
             
