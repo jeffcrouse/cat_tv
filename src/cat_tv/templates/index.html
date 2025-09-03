@@ -38,9 +38,9 @@
             <h2>Player Controls</h2>
             <div class="player-controls">
                 <div class="volume-control">
-                    <label for="volume-slider">Volume: <span id="volume-display">150</span>%</label>
+                    <label for="volume-slider">Volume: <span id="volume-display">{{ config.VOLUME }}</span>%</label>
                     <div class="volume-slider-container">
-                        <input type="range" id="volume-slider" min="0" max="300" value="150" step="10">
+                        <input type="range" id="volume-slider" min="0" max="300" value="{{ config.VOLUME }}" step="10">
                         <div class="volume-buttons">
                             <button onclick="setVolume(100)">Normal</button>
                             <button onclick="setVolume(150)">Loud</button>

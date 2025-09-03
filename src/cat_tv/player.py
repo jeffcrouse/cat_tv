@@ -130,13 +130,13 @@ class VideoPlayer:
                     env["PULSE_SINK"] = sink_name
                     logger.info("Error checking sinks, falling back to HDMI")
             
-            # Set volume using PulseAudio (convert VLC range 0-512 to PulseAudio percentage)
-            if sink_name and config.VOLUME != 100:
-                volume_percent = min(int(config.VOLUME * 100 / 100), 500)  # Cap at 500% for safety
+            # Set volume using PulseAudio from config
+            if sink_name:
+                volume_percent = min(max(config.VOLUME, 0), 500)  # Cap between 0-500% for safety
                 try:
                     subprocess.run(["pactl", "set-sink-volume", sink_name, f"{volume_percent}%"], 
                                  timeout=3, check=False)
-                    logger.info(f"Set audio volume to {volume_percent}% on {sink_name}")
+                    logger.info(f"Set audio volume to {volume_percent}% on {sink_name} (from config)")
                 except Exception as e:
                     logger.warning(f"Failed to set volume: {e}")
             

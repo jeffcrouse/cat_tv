@@ -46,5 +46,35 @@ class Config:
         """Create necessary directories if they don't exist."""
         cls.DATA_DIR.mkdir(parents=True, exist_ok=True)
         cls.LOG_DIR.mkdir(parents=True, exist_ok=True)
+    
+    @classmethod
+    def update_env_value(cls, key: str, value: str):
+        """Update a value in the .env file."""
+        env_file = cls.BASE_DIR / ".env"
+        
+        # Read existing .env file
+        lines = []
+        if env_file.exists():
+            with open(env_file, 'r') as f:
+                lines = f.readlines()
+        
+        # Update or add the key
+        key_found = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith(f"{key}="):
+                lines[i] = f"{key}={value}\n"
+                key_found = True
+                break
+        
+        # Add key if not found
+        if not key_found:
+            lines.append(f"{key}={value}\n")
+        
+        # Write back to file
+        with open(env_file, 'w') as f:
+            f.writelines(lines)
+        
+        # Update the config instance
+        setattr(cls, key, type(getattr(cls, key))(value) if hasattr(cls, key) else value)
 
 config = Config()

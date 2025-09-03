@@ -126,7 +126,7 @@ def stop_status_broadcast():
 @app.route('/')
 def index():
     """Main dashboard."""
-    return render_template('index.html')
+    return render_template('index.html', config=config)
 
 @app.route('/api/status')
 def get_status():
@@ -332,6 +332,13 @@ def set_volume():
         success = active_player.set_volume(volume)
         
         if success:
+            # Save volume to config file
+            try:
+                config.update_env_value('VOLUME', str(volume))
+                logger.info(f"Saved volume {volume} to config")
+            except Exception as e:
+                logger.error(f"Failed to save volume to config: {e}")
+            
             # Broadcast updated status
             socketio.emit('status_update', get_status_data())
             return jsonify({'message': 'Volume set', 'volume': volume})

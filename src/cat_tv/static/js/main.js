@@ -8,6 +8,7 @@ socket.on('connect', () => {
     console.log('Connected to server');
     loadHistory();
     loadSchedules();
+    loadInitialVolume();
 });
 
 socket.on('status_update', (data) => {
@@ -411,6 +412,27 @@ async function loadHistory() {
 
 // Auto-refresh
 setInterval(loadHistory, 30000);   // Refresh history every 30 seconds
+
+// Load initial volume from server
+async function loadInitialVolume() {
+    try {
+        const response = await fetch('/api/volume');
+        const data = await response.json();
+        
+        if (data.volume !== undefined) {
+            const volumeSlider = document.getElementById('volume-slider');
+            const volumeDisplay = document.getElementById('volume-display');
+            
+            if (volumeSlider && volumeDisplay) {
+                volumeSlider.value = data.volume;
+                volumeDisplay.textContent = data.volume;
+                console.log('Loaded initial volume:', data.volume);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading initial volume:', error);
+    }
+}
 
 // Volume control functions
 function setVolume(volume) {
