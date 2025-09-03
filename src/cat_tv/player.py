@@ -100,6 +100,29 @@ class VideoPlayer:
             logger.info(f"Playing: {title}")
             self.current_video = {"url": url, "title": title}
             
+            # Set PulseAudio sink via environment variable
+            env = os.environ.copy()
+            if config.AUDIO_OUTPUT == "hdmi":
+                env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                logger.info("Setting PULSE_SINK to HDMI audio")
+            elif config.AUDIO_OUTPUT == "local":
+                env["PULSE_SINK"] = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                logger.info("Setting PULSE_SINK to headphone audio")
+            elif config.AUDIO_OUTPUT == "all":
+                # Try combined sink first
+                try:
+                    result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                          capture_output=True, text=True, timeout=5)
+                    if "cat_tv_combined" in result.stdout:
+                        env["PULSE_SINK"] = "cat_tv_combined"
+                        logger.info("Setting PULSE_SINK to combined audio")
+                    else:
+                        env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                        logger.info("Combined sink not found, falling back to HDMI")
+                except Exception as e:
+                    env["PULSE_SINK"] = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
+                    logger.info("Error checking sinks, falling back to HDMI")
+            
             # Test with a simple URL first to debug VLC
             if "googlevideo.com" in url or "youtube" in url.lower():
                 logger.info("Testing VLC with a simple test URL first...")
@@ -125,7 +148,8 @@ class VideoPlayer:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
+                env=env
             )
             
             # Start threads to monitor output
@@ -211,57 +235,18 @@ class VideoPlayer:
         # Go back to using cvlc directly since wrapper has privilege issues
         cmd = ["cvlc"]  # Console VLC (no GUI)
         
-        # Add options for service environment  
+        # Add minimal options for service environment  
         cmd.extend([
             "--intf", "dummy",  # No interface
             "--no-video-title-show",
-            "--no-osd",  # No on-screen display
-            "--no-spu",  # No subtitles (which cause blending issues)
-            "--fullscreen",
+            "--quiet",  # Reduce verbose output
         ])
         
         # Let VLC auto-detect the best video output for the system
         # Remove specific video output to let VLC choose
         
-        # Add audio configuration using PipeWire/PulseAudio
-        if config.AUDIO_OUTPUT == "hdmi":
-            # Use PipeWire for HDMI audio
-            cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
-        elif config.AUDIO_OUTPUT == "local": 
-            # Use PipeWire for headphone jack
-            cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fe00b840.mailbox.stereo-fallback"])
-        elif config.AUDIO_OUTPUT == "all":
-            # Output to all available audio interfaces simultaneously
-            try:
-                # Check if combined sink exists and is working
-                result = subprocess.run(["pactl", "list", "sinks", "short"], 
-                                      capture_output=True, text=True, timeout=5)
-                logger.info(f"Available sinks: {result.stdout.strip()}")
-                if "cat_tv_combined" in result.stdout:
-                    # Test if the combined sink actually works
-                    test_result = subprocess.run(
-                        ["cvlc", "--intf", "dummy", "--play-and-exit", "--run-time=1", 
-                         "--aout", "pulse", "--pulse-sink", "cat_tv_combined", "/dev/null"],
-                        capture_output=True, text=True, timeout=5
-                    )
-                    if test_result.returncode == 0:
-                        cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
-                        logger.info("✅ Using working combined audio sink for multi-output")
-                    else:
-                        logger.warning(f"❌ Combined sink exists but doesn't work (exit code: {test_result.returncode})")
-                        logger.info("🔄 Falling back to HDMI audio")
-                        cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
-                else:
-                    logger.warning("❌ Combined sink 'cat_tv_combined' not found")
-                    logger.info("🔄 Falling back to HDMI audio")
-                    cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
-            except Exception as e:
-                logger.warning(f"❌ Could not check for combined sink: {e}")
-                logger.info("🔄 Falling back to HDMI audio")
-                cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
-        else:
-            # Default to PulseAudio/PipeWire automatic device selection
-            cmd.extend(["--aout", "pulse"])
+        # Use PulseAudio output (sink is set via PULSE_SINK environment variable)
+        cmd.extend(["--aout", "pulse"])
             
         cmd.append(url)
         return cmd
