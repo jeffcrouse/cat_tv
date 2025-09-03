@@ -105,7 +105,7 @@ SECRET_KEY=$(openssl rand -hex 32)
 
 # Player settings
 PLAYER_BACKEND=vlc
-AUDIO_OUTPUT=hdmi
+AUDIO_OUTPUT=all
 
 # Debug mode
 DEBUG=False
@@ -132,12 +132,15 @@ sudo usermod -a -G video,audio,render $ACTUAL_USER
 
 # Enable PipeWire for the user (modern audio system)
 echo "Enabling PipeWire audio system for user $ACTUAL_USER..."
-sudo -u $ACTUAL_USER systemctl --user enable pipewire
-sudo -u $ACTUAL_USER systemctl --user start pipewire
+# Use loginctl to ensure user session exists before managing user services
+sudo loginctl enable-linger $ACTUAL_USER
+# Set up proper environment for user systemctl commands
+sudo -u $ACTUAL_USER XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID systemctl --user enable pipewire pipewire-pulse
+sudo -u $ACTUAL_USER XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID systemctl --user start pipewire pipewire-pulse
 
 # Create PipeWire configuration for multiple audio outputs
 echo "Setting up multi-output audio configuration..."
-sudo -u $ACTUAL_USER mkdir -p "$ACTUAL_USER_HOME/.config/pipewire"
+sudo -u $ACTUAL_USER mkdir -p "$ACTUAL_USER_HOME/.config/pipewire/pipewire.conf.d"
 sudo -u $ACTUAL_USER tee "$ACTUAL_USER_HOME/.config/pipewire/pipewire.conf.d/99-cat-tv.conf" > /dev/null << 'EOF'
 # Cat TV multi-output audio configuration
 context.modules = [
@@ -172,6 +175,17 @@ context.modules = [
     }
 ]
 EOF
+
+# Restart PipeWire to load the new configuration
+echo "Restarting PipeWire to load multi-output configuration..."
+sudo -u $ACTUAL_USER XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID systemctl --user restart pipewire pipewire-pulse
+
+# Wait a moment for PipeWire to stabilize
+sleep 3
+
+# Verify the combined sink was created
+echo "Verifying combined sink creation..."
+sudo -u $ACTUAL_USER XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID pactl list sinks short | grep cat_tv_combined || echo "Combined sink not found - will be created on first PipeWire restart"
 
 # Create systemd service with simpler configuration
 echo "Creating systemd service..."
@@ -214,6 +228,12 @@ echo "Installation complete!"
 echo "====================="
 echo ""
 echo "IMPORTANT: You may need to log out and back in for group changes to take effect!"
+echo ""
+echo "Audio is configured to output to ALL available interfaces simultaneously."
+echo "To change audio output, edit .env and set AUDIO_OUTPUT to:"
+echo "  - hdmi: HDMI audio only"
+echo "  - local: Headphone jack only"
+echo "  - all: All audio interfaces simultaneously"
 echo ""
 echo "To configure Raspberry Pi to boot to CLI mode:"
 echo "  sudo raspi-config"
