@@ -149,6 +149,19 @@ class CatTVApp:
 
 def main():
     """Main entry point."""
+    import os
+    import pwd
+    
+    # Log user context immediately on startup with distinctive markers
+    print(f"🔍 STARTUP USER CHECK: Real UID={os.getuid()}, Effective UID={os.geteuid()}")
+    try:
+        username = pwd.getpwuid(os.getuid()).pw_name
+        print(f"🔍 STARTUP USER CHECK: Username='{username}'")
+    except Exception as e:
+        print(f"🔍 STARTUP USER CHECK: Could not get username: {e}")
+    print(f"🔍 STARTUP USER CHECK: USER env={os.getenv('USER', 'NOT_SET')}")
+    print(f"🔍 STARTUP USER CHECK: HOME env={os.getenv('HOME', 'NOT_SET')}")
+    
     app = CatTVApp()
     app.run()
 

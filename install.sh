@@ -89,9 +89,17 @@ mkdir -p data logs
 echo "Initializing database..."
 uv run python -c "from src.cat_tv.models import init_db; init_db()"
 
+# Get the actual non-root user (in case script is run with sudo)
+ACTUAL_USER=${SUDO_USER:-$USER}
+ACTUAL_USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+ACTUAL_USER_ID=$(id -u "$ACTUAL_USER")
+
+echo "Installing for user: $ACTUAL_USER"
+echo "User home directory: $ACTUAL_USER_HOME"
+
 # Add user to required groups for hardware access
 echo "Adding user to video, audio, and render groups..."
-sudo usermod -a -G video,audio,render $USER
+sudo usermod -a -G video,audio,render $ACTUAL_USER
 
 # Create systemd service with simpler configuration
 echo "Creating systemd service..."
@@ -103,17 +111,17 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=$USER
-Group=$USER
+User=$ACTUAL_USER
+Group=$ACTUAL_USER
 WorkingDirectory=$SCRIPT_DIR
 ExecStart=$UV_PATH run cat-tv
 Restart=always
 RestartSec=10
 
 # Environment variables
-Environment=HOME=$HOME
-Environment=USER=$USER
-Environment=XDG_RUNTIME_DIR=/run/user/$(id -u $USER)
+Environment=HOME=$ACTUAL_USER_HOME
+Environment=USER=$ACTUAL_USER
+Environment=XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID
 
 # Standard output/error logging
 StandardOutput=journal
@@ -142,8 +150,8 @@ echo "To start the service now:"
 echo "  sudo systemctl start cat-tv"
 echo ""
 echo "Project installed in: $SCRIPT_DIR"
-echo "Running as user: $USER"
-echo "User groups: $(groups $USER)"
+echo "Service will run as user: $ACTUAL_USER"
+echo "User groups: $(groups $ACTUAL_USER)"
 echo ""
 echo "Web interface will be available at:"
 echo "  http://$(hostname -I | cut -d' ' -f1):8080"
