@@ -47,16 +47,17 @@ class VideoPlayer:
             if result.returncode == 0:
                 logger.info("VLC is installed and accessible")
                 
-                # Test basic playback capability
-                logger.info("Testing VLC basic playback command...")
-                basic_test_cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--quiet", "/dev/null"]
-                basic_result = subprocess.run(basic_test_cmd, capture_output=True, text=True, timeout=3)
+                # Test basic playback capability with default audio
+                logger.info("Testing VLC with default audio...")
+                basic_test_cmd = ["cvlc", "--intf", "dummy", "--play-and-exit", "--quiet", "--aout", "pulse", "/dev/null"]
+                basic_result = subprocess.run(basic_test_cmd, capture_output=True, text=True, timeout=5)
                 
                 if basic_result.returncode == 0:
-                    logger.info("VLC basic playback test passed")
+                    logger.info("✅ VLC basic playback test with default audio passed")
                 else:
-                    logger.warning(f"VLC basic playback test failed with code: {basic_result.returncode}")
-                    logger.warning(f"stderr: {basic_result.stderr}")
+                    logger.warning(f"❌ VLC basic playback test failed with code: {basic_result.returncode}")
+                    if basic_result.stderr:
+                        logger.warning(f"stderr: {basic_result.stderr}")
                 
                 return True
             else:
@@ -235,14 +236,17 @@ class VideoPlayer:
                 # Check if combined sink exists
                 result = subprocess.run(["pactl", "list", "sinks", "short"], 
                                       capture_output=True, text=True, timeout=5)
+                logger.info(f"Available sinks: {result.stdout.strip()}")
                 if "cat_tv_combined" in result.stdout:
                     cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
-                    logger.info("Using combined audio sink for multi-output")
+                    logger.info("✅ Using combined audio sink for multi-output")
                 else:
-                    logger.warning("Combined sink 'cat_tv_combined' not found, using default audio")
+                    logger.warning("❌ Combined sink 'cat_tv_combined' not found")
+                    logger.info("🔄 Falling back to default PulseAudio (will use default audio device)")
                     cmd.extend(["--aout", "pulse"])
             except Exception as e:
-                logger.warning(f"Could not check for combined sink: {e}, using default audio")
+                logger.warning(f"❌ Could not check for combined sink: {e}")
+                logger.info("🔄 Falling back to default PulseAudio")
                 cmd.extend(["--aout", "pulse"])
         else:
             # Default to PulseAudio/PipeWire automatic device selection
