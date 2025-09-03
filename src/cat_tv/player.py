@@ -200,28 +200,12 @@ class VideoPlayer:
         # Add options for service environment
         cmd.extend([
             "--intf", "dummy",  # No interface
-            "--fullscreen",
+            "--vout", "dummy",  # No video output for now
+            "--aout", "dummy",  # No audio output for now
         ])
         
-        # For service mode, try framebuffer output instead of KMS
-        if config.IS_RASPBERRY_PI:
-            # Check if we're running in a service (no DISPLAY variable)
-            import os
-            if not os.getenv('DISPLAY'):
-                # Service mode - use framebuffer
-                cmd.extend([
-                    "--vout", "fb",
-                    "--fbdev", "/dev/fb0",
-                ])
-            else:
-                # Interactive mode - use default video output
-                pass
-        
-        # Add audio configuration  
-        if config.AUDIO_OUTPUT == "hdmi":
-            cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
-        elif config.AUDIO_OUTPUT == "local": 
-            cmd.extend(["--aout", "alsa"])
+        # Temporarily disable all audio/video output to test core functionality
+        # This should allow VLC to fetch and process streams without hardware issues
             
         cmd.append(url)
         return cmd
