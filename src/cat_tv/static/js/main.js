@@ -49,7 +49,10 @@ function updateStatus(data) {
     
     // Update schedules if schedule data is available
     if (data.scheduler && data.scheduler.all_schedules) {
+        console.log('Updating schedules from WebSocket:', data.scheduler.all_schedules.length, 'schedules');
         updateSchedulesFromStatus(data.scheduler.all_schedules);
+    } else {
+        console.log('No schedule data in WebSocket update');
     }
     
     // Update display status
@@ -94,6 +97,12 @@ function updateStatus(data) {
 function updateSchedulesFromStatus(schedulesData) {
     const tbody = document.querySelector('#schedules-table tbody');
     if (!tbody) return;
+    
+    // Don't clear table if no schedule data (prevents disappearing)
+    if (!schedulesData || schedulesData.length === 0) {
+        console.log('No schedule data in WebSocket update, keeping existing schedules');
+        return;
+    }
     
     tbody.innerHTML = '';
     

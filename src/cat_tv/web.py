@@ -58,6 +58,7 @@ def get_status_data():
     try:
         with get_session() as session:
             schedules = session.query(Schedule).all()
+            logger.debug(f"Found {len(schedules)} schedules for WebSocket status")
             for schedule in schedules:
                 all_schedules.append({
                     'id': schedule.id,
@@ -70,6 +71,7 @@ def get_status_data():
                 })
     except Exception as e:
         logger.error(f"Error getting schedules for status: {e}")
+        logger.exception("Full traceback:")
     
     return {
         'player': {
