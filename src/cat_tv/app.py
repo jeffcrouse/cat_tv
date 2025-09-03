@@ -139,7 +139,8 @@ class CatTVApp:
                     port=config.FLASK_PORT, 
                     debug=config.DEBUG,
                     use_reloader=False,  # Don't use reloader in production
-                    ssl_context=(str(cert_file), str(key_file))
+                    ssl_context=(str(cert_file), str(key_file)),
+                    allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
                 )
             else:
                 logger.info("Starting with HTTP only (no certificates found)")
