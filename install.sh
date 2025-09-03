@@ -150,22 +150,34 @@ context.modules = [
             combine.mode = sink
             node.name = "cat_tv_combined"
             node.description = "Cat TV All Audio Outputs"
-            combine.latency-compensate = false
             combine.props = {
                 audio.position = [ FL FR ]
             }
             stream.props = {
+                audio.position = [ FL FR ]
+                media.class = Audio/Sink
             }
             stream.rules = [
                 {
                     matches = [
                         {
-                            node.name = "~alsa_output.*"
+                            node.name = "alsa_output.platform-fef00700.hdmi.hdmi-stereo"
                         }
                     ]
                     actions = {
                         create-stream = {
-                            combine.audio.position = [ FL FR ]
+                            audio.position = [ FL FR ]
+                        }
+                    }
+                }
+                {
+                    matches = [
+                        {
+                            node.name = "alsa_output.platform-fe00b840.mailbox.stereo-fallback"
+                        }
+                    ]
+                    actions = {
+                        create-stream = {
                             audio.position = [ FL FR ]
                         }
                     }

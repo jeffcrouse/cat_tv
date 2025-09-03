@@ -233,21 +233,32 @@ class VideoPlayer:
         elif config.AUDIO_OUTPUT == "all":
             # Output to all available audio interfaces simultaneously
             try:
-                # Check if combined sink exists
+                # Check if combined sink exists and is working
                 result = subprocess.run(["pactl", "list", "sinks", "short"], 
                                       capture_output=True, text=True, timeout=5)
                 logger.info(f"Available sinks: {result.stdout.strip()}")
                 if "cat_tv_combined" in result.stdout:
-                    cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
-                    logger.info("✅ Using combined audio sink for multi-output")
+                    # Test if the combined sink actually works
+                    test_result = subprocess.run(
+                        ["cvlc", "--intf", "dummy", "--play-and-exit", "--run-time=1", 
+                         "--aout", "pulse", "--pulse-sink", "cat_tv_combined", "/dev/null"],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if test_result.returncode == 0:
+                        cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
+                        logger.info("✅ Using working combined audio sink for multi-output")
+                    else:
+                        logger.warning(f"❌ Combined sink exists but doesn't work (exit code: {test_result.returncode})")
+                        logger.info("🔄 Falling back to HDMI audio")
+                        cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
                 else:
                     logger.warning("❌ Combined sink 'cat_tv_combined' not found")
-                    logger.info("🔄 Falling back to default PulseAudio (will use default audio device)")
-                    cmd.extend(["--aout", "pulse"])
+                    logger.info("🔄 Falling back to HDMI audio")
+                    cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
             except Exception as e:
                 logger.warning(f"❌ Could not check for combined sink: {e}")
-                logger.info("🔄 Falling back to default PulseAudio")
-                cmd.extend(["--aout", "pulse"])
+                logger.info("🔄 Falling back to HDMI audio")
+                cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fef00700.hdmi.hdmi-stereo"])
         else:
             # Default to PulseAudio/PipeWire automatic device selection
             cmd.extend(["--aout", "pulse"])
