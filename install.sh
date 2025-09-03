@@ -28,19 +28,15 @@ sudo apt-get install -y \
     git \
     curl
 
-# Install uv if not already installed
+# Check if uv is installed (don't install it automatically)
 if ! command -v uv &> /dev/null; then
-    echo "Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    # Reload shell to get uv in PATH
-    source ~/.bashrc 2>/dev/null || true
-    source ~/.profile 2>/dev/null || true
-fi
-
-# Verify uv is available
-if ! command -v uv &> /dev/null; then
-    echo "Error: uv installation failed or not in PATH"
-    echo "Please install uv manually: https://docs.astral.sh/uv/"
+    echo "Error: uv is not installed or not in PATH"
+    echo ""
+    echo "Please install uv first:"
+    echo "  Visit: https://docs.astral.sh/uv/getting-started/installation/"
+    echo "  Or run: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo ""
+    echo "After installing uv, run this script again."
     exit 1
 fi
 
