@@ -129,7 +129,8 @@ class CatTVApp:
                 host=config.FLASK_HOST, 
                 port=config.FLASK_PORT, 
                 debug=config.DEBUG,
-                use_reloader=False  # Don't use reloader in production
+                use_reloader=False,  # Don't use reloader in production
+                allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
             )
             
         except KeyboardInterrupt:
