@@ -203,14 +203,21 @@ class VideoPlayer:
             "--fullscreen",
         ])
         
-        # Add Raspberry Pi specific video output for service
+        # For service mode, try framebuffer output instead of KMS
         if config.IS_RASPBERRY_PI:
-            cmd.extend([
-                "--vout", "kms",  # Use KMS video output for Pi
-                "--kms-drm-device", "/dev/dri/card0",
-            ])
+            # Check if we're running in a service (no DISPLAY variable)
+            import os
+            if not os.getenv('DISPLAY'):
+                # Service mode - use framebuffer
+                cmd.extend([
+                    "--vout", "fb",
+                    "--fbdev", "/dev/fb0",
+                ])
+            else:
+                # Interactive mode - use default video output
+                pass
         
-        # Add audio configuration
+        # Add audio configuration  
         if config.AUDIO_OUTPUT == "hdmi":
             cmd.extend(["--aout", "alsa", "--alsa-audio-device", "hdmi"])
         elif config.AUDIO_OUTPUT == "local": 
