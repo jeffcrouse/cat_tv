@@ -151,6 +151,7 @@ RestartSec=10
 Environment=HOME=$ACTUAL_USER_HOME
 Environment=USER=$ACTUAL_USER
 Environment=XDG_RUNTIME_DIR=/run/user/$ACTUAL_USER_ID
+Environment=DISPLAY=:0
 
 # Standard output/error logging
 StandardOutput=journal
