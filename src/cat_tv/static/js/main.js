@@ -47,6 +47,11 @@ function updateStatus(data) {
         }
     }
     
+    // Update schedules if schedule data is available
+    if (data.scheduler && data.scheduler.all_schedules) {
+        updateSchedulesFromStatus(data.scheduler.all_schedules);
+    }
+    
     // Update display status
     if (data.display) {
         const displayEl = document.getElementById('display-status');
@@ -85,6 +90,62 @@ function updateStatus(data) {
 // Display control removed - display is now controlled by schedule only
 
 // Schedule management
+// Update schedules from WebSocket status data
+function updateSchedulesFromStatus(schedulesData) {
+    const tbody = document.querySelector('#schedules-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    schedulesData.forEach(schedule => {
+        const days = schedule.days_of_week.split(',').map(d => 
+            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][parseInt(d)]
+        ).join(', ');
+        
+        // Convert 24-hour to 12-hour format
+        const formatTime = (time24) => {
+            const [hours, minutes] = time24.split(':');
+            const hour12 = ((parseInt(hours) + 11) % 12) + 1;
+            const period = parseInt(hours) >= 12 ? 'PM' : 'AM';
+            return `${hour12}:${minutes} ${period}`;
+        };
+        
+        const startTime12 = formatTime(schedule.start_time);
+        const endTime12 = formatTime(schedule.end_time);
+        
+        const row = tbody.insertRow();
+        row.dataset.scheduleId = schedule.id;
+        
+        // Add highlighting for current schedule
+        if (schedule.is_current) {
+            row.classList.add('current-schedule');
+        }
+        
+        row.innerHTML = `
+            <td>${schedule.name}</td>
+            <td>${startTime12}</td>
+            <td>${endTime12}</td>
+            <td>${days}</td>
+            <td>
+                <span class="status-badge ${schedule.is_active ? 'active' : 'inactive'}">
+                    ${schedule.is_active ? 'Active' : 'Inactive'}
+                </span>
+                ${schedule.is_current ? '<span class="current-indicator">● PLAYING</span>' : ''}
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button onclick="editSchedule(${schedule.id})" class="btn-edit">Edit</button>
+                    <button onclick="deleteSchedule(${schedule.id})" class="btn-delete">Delete</button>
+                    <button onclick="toggleSchedule(${schedule.id}, ${!schedule.is_active})" 
+                            class="${schedule.is_active ? 'btn-disable' : 'btn-enable'}">
+                        ${schedule.is_active ? 'Disable' : 'Enable'}
+                    </button>
+                </div>
+            </td>
+        `;
+    });
+}
+
 async function loadSchedules() {
     try {
         const response = await fetch('/api/schedules');

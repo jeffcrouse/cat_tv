@@ -551,3 +551,29 @@ input, select {
         justify-content: center;
     }
 }
+
+/* Current Schedule Highlighting */
+.current-schedule {
+    background-color: #f0f8ff !important;
+    border-left: 4px solid #667eea;
+}
+
+.current-indicator {
+    color: #667eea;
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-left: 10px;
+}
+
+.current-indicator::before {
+    content: "●";
+    color: #10b981;
+    margin-right: 4px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}

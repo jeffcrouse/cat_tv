@@ -53,6 +53,24 @@ def get_status_data():
     # Check which schedule is currently active
     current_schedule = get_current_active_schedule()
     
+    # Get all schedules for real-time updates
+    all_schedules = []
+    try:
+        with get_session() as session:
+            schedules = session.query(Schedule).all()
+            for schedule in schedules:
+                all_schedules.append({
+                    'id': schedule.id,
+                    'name': schedule.name,
+                    'start_time': schedule.start_time.strftime('%H:%M'),
+                    'end_time': schedule.end_time.strftime('%H:%M'),
+                    'days_of_week': schedule.days_of_week,
+                    'is_active': schedule.is_active,
+                    'is_current': current_schedule and current_schedule['id'] == schedule.id
+                })
+    except Exception as e:
+        logger.error(f"Error getting schedules for status: {e}")
+    
     return {
         'player': {
             'is_playing': active_player.is_playing(),
@@ -61,7 +79,8 @@ def get_status_data():
         },
         'scheduler': {
             'is_play_time': _scheduler.is_play_time if _scheduler else False,
-            'current_schedule': current_schedule
+            'current_schedule': current_schedule,
+            'all_schedules': all_schedules
         },
         'display': active_display.get_status() if active_display else {'error': 'Not initialized'},
         'time': datetime.now().isoformat()
@@ -193,6 +212,8 @@ def add_schedule():
             logger.info(f"Created schedule: {schedule.name} ({schedule.start_time}-{schedule.end_time})")
             
             # Notify scheduler to reload schedules
+            # Broadcast updated status to all clients
+            socketio.emit('status_update', get_status_data())
             socketio.emit('schedule_updated', {'action': 'reload'})
             
             # Tell scheduler to reload and check current time
@@ -229,6 +250,8 @@ def update_schedule(schedule_id):
         session.commit()
         
         # Notify scheduler to reload schedules
+        # Broadcast updated status to all clients
+        socketio.emit('status_update', get_status_data())
         socketio.emit('schedule_updated', {'action': 'reload'})
         
         # Tell scheduler to reload and check current time
@@ -250,6 +273,8 @@ def delete_schedule(schedule_id):
         session.commit()
         
         # Notify scheduler to reload schedules
+        # Broadcast updated status to all clients
+        socketio.emit('status_update', get_status_data())
         socketio.emit('schedule_updated', {'action': 'reload'})
         
         # Tell scheduler to reload and check current time
