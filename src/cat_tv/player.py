@@ -22,6 +22,28 @@ class VideoPlayer:
         self.stderr_thread: Optional[threading.Thread] = None
         self.stdout_thread: Optional[threading.Thread] = None
         
+    def test_vlc(self) -> bool:
+        """Test if VLC is working with a simple test."""
+        try:
+            logger.info("Testing VLC installation...")
+            # Try to run VLC with just version flag
+            test_cmd = ["cvlc", "--version"]
+            result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0:
+                logger.info("VLC is installed and accessible")
+                return True
+            else:
+                logger.error(f"VLC test failed with code {result.returncode}")
+                logger.error(f"stderr: {result.stderr}")
+                return False
+        except FileNotFoundError:
+            logger.error("VLC (cvlc) not found in PATH")
+            return False
+        except Exception as e:
+            logger.error(f"VLC test error: {e}")
+            return False
+        
     def play(self, url: str, title: str = "Video") -> bool:
         """Play a video URL."""
         try:
@@ -39,7 +61,9 @@ class VideoPlayer:
             else:
                 raise ValueError(f"Unknown player backend: {self.backend}")
             
-            logger.debug(f"Running command: {' '.join(cmd)}")
+            # Log the full command for debugging
+            logger.info(f"Running VLC command: {' '.join(cmd)}")
+            logger.info(f"URL length: {len(url)} characters")
             
             self.current_process = subprocess.Popen(
                 cmd,
@@ -82,7 +106,7 @@ class VideoPlayer:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to play video: {e}")
+            logger.error(f"Failed to play video: {e}", exc_info=True)
             self.current_video = None
             return False
     
