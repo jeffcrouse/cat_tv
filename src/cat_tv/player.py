@@ -218,7 +218,19 @@ class VideoPlayer:
             cmd.extend(["--aout", "pulse", "--pulse-sink", "alsa_output.platform-fe00b840.mailbox.stereo-fallback"])
         elif config.AUDIO_OUTPUT == "all":
             # Output to all available audio interfaces simultaneously
-            cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
+            try:
+                # Check if combined sink exists
+                result = subprocess.run(["pactl", "list", "sinks", "short"], 
+                                      capture_output=True, text=True, timeout=5)
+                if "cat_tv_combined" in result.stdout:
+                    cmd.extend(["--aout", "pulse", "--pulse-sink", "cat_tv_combined"])
+                    logger.info("Using combined audio sink for multi-output")
+                else:
+                    logger.warning("Combined sink 'cat_tv_combined' not found, using default audio")
+                    cmd.extend(["--aout", "pulse"])
+            except Exception as e:
+                logger.warning(f"Could not check for combined sink: {e}, using default audio")
+                cmd.extend(["--aout", "pulse"])
         else:
             # Default to PulseAudio/PipeWire automatic device selection
             cmd.extend(["--aout", "pulse"])
