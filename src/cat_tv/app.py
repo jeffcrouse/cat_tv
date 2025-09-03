@@ -130,30 +130,38 @@ class CatTVApp:
             key_file = Path(config.BASE_DIR) / 'key.pem'
             
             # Run web server
-            if cert_file.exists() and key_file.exists():
-                logger.info("🔒 Starting with HTTPS support (certificates found)")
-                logger.info(f"Access the interface at https://{config.FLASK_HOST}:{config.FLASK_PORT}")
-                socketio.run(
-                    app, 
-                    host=config.FLASK_HOST, 
-                    port=config.FLASK_PORT, 
-                    debug=config.DEBUG,
-                    use_reloader=False,  # Don't use reloader in production
-                    ssl_context=(str(cert_file), str(key_file)),
-                    allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
-                )
-            else:
-                logger.info("Starting with HTTP only (no certificates found)")
-                logger.info("⚠️ Audio recording requires HTTPS. To enable it, generate certificates:")
-                logger.info("  cd ~/cat_tv && openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365")
-                socketio.run(
-                    app, 
-                    host=config.FLASK_HOST, 
-                    port=config.FLASK_PORT, 
-                    debug=config.DEBUG,
-                    use_reloader=False,  # Don't use reloader in production
-                allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
-            )
+            try:
+                if cert_file.exists() and key_file.exists():
+                    logger.info("🔒 Starting with HTTPS support (certificates found)")
+                    logger.info(f"Access the interface at https://{config.FLASK_HOST}:{config.FLASK_PORT}")
+                    logger.info(f"Certificate file: {cert_file} (exists: {cert_file.exists()})")
+                    logger.info(f"Key file: {key_file} (exists: {key_file.exists()})")
+                    socketio.run(
+                        app, 
+                        host=config.FLASK_HOST, 
+                        port=config.FLASK_PORT, 
+                        debug=config.DEBUG,
+                        use_reloader=False,  # Don't use reloader in production
+                        ssl_context=(str(cert_file), str(key_file)),
+                        allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
+                    )
+                else:
+                    logger.info("Starting with HTTP only (no certificates found)")
+                    logger.info("⚠️ Audio recording requires HTTPS. To enable it, generate certificates:")
+                    logger.info("  cd ~/cat_tv && openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365")
+                    logger.info(f"Access the interface at http://{config.FLASK_HOST}:{config.FLASK_PORT}")
+                    socketio.run(
+                        app, 
+                        host=config.FLASK_HOST, 
+                        port=config.FLASK_PORT, 
+                        debug=config.DEBUG,
+                        use_reloader=False,  # Don't use reloader in production
+                        allow_unsafe_werkzeug=True  # Allow Werkzeug in production (for embedded systems)
+                    )
+            except Exception as e:
+                logger.error(f"Failed to start web server: {e}")
+                logger.error(f"Port {config.FLASK_PORT} may already be in use")
+                raise
             
         except KeyboardInterrupt:
             logger.info("Cat TV application stopped by user")
