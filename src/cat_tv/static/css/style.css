@@ -245,6 +245,22 @@ input, select {
     color: #999;
 }
 
+/* Schedule header styles */
+.schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.schedule-header h2 {
+    margin-bottom: 0;
+}
+
+.schedule-header button {
+    width: auto;
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
     body {
