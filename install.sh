@@ -44,8 +44,37 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-UV_PATH=$(which uv)
-echo "Found uv at: $UV_PATH"
+# Get UV path for the actual user (not root)
+if [ -n "$SUDO_USER" ]; then
+    # Running with sudo, check user's UV installation
+    UV_PATH=$(sudo -u "$ACTUAL_USER" which uv 2>/dev/null)
+    if [ -z "$UV_PATH" ]; then
+        # Try common user locations
+        if [ -x "$ACTUAL_USER_HOME/.local/bin/uv" ]; then
+            UV_PATH="$ACTUAL_USER_HOME/.local/bin/uv"
+        elif [ -x "/usr/local/bin/uv" ]; then
+            UV_PATH="/usr/local/bin/uv"
+        fi
+    fi
+else
+    UV_PATH=$(which uv)
+fi
+
+echo "Found uv at: $UV_PATH for user: $ACTUAL_USER"
+
+# Validate UV path is accessible by the target user
+if [ -n "$SUDO_USER" ]; then
+    if ! sudo -u "$ACTUAL_USER" test -x "$UV_PATH"; then
+        echo "Error: UV at $UV_PATH is not accessible by user $ACTUAL_USER"
+        echo "Please install UV as user $ACTUAL_USER (not as root)"
+        exit 1
+    fi
+else
+    if ! test -x "$UV_PATH"; then
+        echo "Error: UV at $UV_PATH is not accessible"
+        exit 1
+    fi
+fi
 
 # Get the current directory (where the script is located)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
