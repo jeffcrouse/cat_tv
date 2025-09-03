@@ -16,6 +16,8 @@ class DisplayController:
             '/sys/class/graphics/fb1/blank'
         ]
         self.working_fb_file = None
+        self._status_cache = None
+        self._status_cache_time = 0
         self._find_working_framebuffer()
     
     def _find_working_framebuffer(self):
@@ -100,7 +102,15 @@ class DisplayController:
             return False
     
     def get_status(self):
-        """Get display status information."""
+        """Get display status information with caching to reduce sudo calls."""
+        import time
+        
+        # Return cached status if less than 30 seconds old
+        current_time = time.time()
+        if (self._status_cache is not None and 
+            current_time - self._status_cache_time < 30):
+            return self._status_cache
+        
         try:
             status = {
                 'available': False,
@@ -147,6 +157,10 @@ class DisplayController:
                 # Default to assuming display is on if we can't read status
                 status['is_blank'] = False
                 logger.debug("Could not determine display blank status, assuming ON")
+            
+            # Cache the status
+            self._status_cache = status
+            self._status_cache_time = current_time
             
             return status
             

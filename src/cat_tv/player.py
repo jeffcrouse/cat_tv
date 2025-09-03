@@ -235,6 +235,7 @@ class VideoPlayer:
             "--no-video-title-show",
             "--quiet",  # Reduce verbose output
             "--fullscreen",  # Full screen display
+            "--volume", str(config.VOLUME),  # Set volume (range: 0-512, default 150)
         ])
         
         # Let VLC auto-detect the best video output for the system

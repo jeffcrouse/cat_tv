@@ -79,7 +79,7 @@ def status_broadcast_worker():
         except Exception as e:
             logger.error(f"Error broadcasting status: {e}")
         
-        time_module.sleep(1)
+        time_module.sleep(1)  # Back to 1 second updates
     
     logger.info("Status broadcast worker stopped")
 

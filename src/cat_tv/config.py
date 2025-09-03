@@ -30,6 +30,7 @@ class Config:
     PLAYER_BACKEND = os.getenv("PLAYER_BACKEND", "vlc")  # vlc, omxplayer, or mpv
     FULLSCREEN = True
     AUDIO_OUTPUT = os.getenv("AUDIO_OUTPUT", "hdmi")  # hdmi, local, or both
+    VOLUME = int(os.getenv("VOLUME", "150"))  # VLC volume (0-512, default 100)
     
     
     # Raspberry Pi specific
